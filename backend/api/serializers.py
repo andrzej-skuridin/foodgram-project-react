@@ -1,4 +1,3 @@
-from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
 from rest_framework import serializers
 
@@ -41,16 +40,6 @@ class UserPOSTSerializer(serializers.ModelSerializer):
     def validate_password(self, value: str) -> str:
         # Без хэширования пароля (согласно модели он просто текст) не работает JWT.
         return make_password(value)
-
-
-# class PasswordChangeSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = User
-#         fields = ('password',)
-#
-#     def validate_password(self, value: str) -> str:
-#         # Без хэширования пароля (согласно модели он просто текст) не работает JWT.
-#         return make_password(value)
 
 
 class TagSerializer(serializers.ModelSerializer):

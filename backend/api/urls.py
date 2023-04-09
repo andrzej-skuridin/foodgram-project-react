@@ -1,7 +1,8 @@
 from django.urls import path, include
 from rest_framework import routers
+from rest_framework.authtoken import views
 
-from api.views import TagViewSet, UserViewSet, IngredientViewSet
+from api.views import TagViewSet, UserViewSet, IngredientViewSet, logout
 
 router = routers.DefaultRouter()
 
@@ -23,8 +24,6 @@ router.register(
 
 urlpatterns = [
     path('', include(router.urls)),
-    path('auth/', include('djoser.urls')),
-    path('auth/', include('djoser.urls.jwt')),
-    # path('auth/token/login', login, name='login'),
+    path('auth/token/login', views.obtain_auth_token, name='login'),
     # path('auth/token/logout', logout, name='logout'),
     ]
