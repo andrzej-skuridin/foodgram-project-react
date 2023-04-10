@@ -1,5 +1,7 @@
 from django.contrib.auth.hashers import make_password
+from django.core.validators import MaxLengthValidator
 from rest_framework import serializers
+from rest_framework.fields import CharField
 
 from recipes.models import Tag, Ingredient
 from users.models import User
@@ -23,23 +25,6 @@ class UserGETSerializer(serializers.ModelSerializer):
     #     current_user = request.user.username
     #     author = data['username']
     #     return current_user == author
-
-
-class UserPOSTSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = (
-            'email',
-            'id',
-            'username',
-            'first_name',
-            'last_name',
-            'password'
-        )
-
-    def validate_password(self, value: str) -> str:
-        # Без хэширования пароля (согласно модели он просто текст) не работает JWT.
-        return make_password(value)
 
 
 class TagSerializer(serializers.ModelSerializer):
