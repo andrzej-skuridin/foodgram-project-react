@@ -3,7 +3,11 @@ from django.core.validators import MaxLengthValidator
 from rest_framework import serializers
 from rest_framework.fields import CharField
 
-from recipes.models import Tag, Ingredient
+from recipes.models import (
+    Tag,
+    Ingredient,
+    Recipe
+)
 from users.models import User
 
 
@@ -38,4 +42,14 @@ class IngredientSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Ingredient
+        fields = '__all__'
+
+
+class RecipeListSerializer(serializers.ModelSerializer):
+    tags = TagSerializer(many=True, required=True)
+    author = UserGETSerializer(many=False, required=True)
+    ingredients = IngredientSerializer(many=True, required=True)
+
+    class Meta:
+        model = Recipe
         fields = '__all__'

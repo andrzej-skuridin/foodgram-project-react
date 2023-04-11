@@ -59,12 +59,13 @@ class Ingredient(models.Model):
 
 class Recipe(models.Model):
     author = models.ForeignKey(
-        User,
+        to=User,
         on_delete=models.CASCADE,
         related_name='recipes_by_this_author',
         verbose_name='Автор',
         blank=False,
-    ),
+        null=True,
+    )
     cooking_time = models.IntegerField(
         verbose_name='Время приготовления',
         max_length=10,
@@ -72,22 +73,14 @@ class Recipe(models.Model):
                     validate_cooking_time,
                     validate_integer],
         blank=False,
-        help_text='Required. 10 characters or fewer.'
-    ),
+        help_text='Required. 10 characters or fewer.',
+        null=True
+    )
     text = models.TextField(
         verbose_name='Описание',
         help_text='Required.',
         blank=False,
-    ),
-    # image = models.ImageField(
-    #     verbose_name='Картинка',
-    #     # upload_to='posts/',
-    #     blank=False
-    # )
-    ingredients = models.ManyToManyField(
-        Ingredient,
-        through='IngredientRecipe',
-        blank=False
+        null=True,
     )
     name = models.CharField(
         verbose_name='Название',
@@ -95,11 +88,22 @@ class Recipe(models.Model):
         validators=[MaxLengthValidator(limit_value=200)],
         help_text='Required. 200 characters or fewer.',
         blank=False,
-    ),
-    tag = models.ManyToManyField(
-        Tag,
+        null=True,
+    )
+    # image = models.ImageField(
+    #     verbose_name='Картинка',
+    #     # upload_to='posts/',
+    #     blank=False
+    # )
+    ingredients = models.ManyToManyField(
+        to=Ingredient,
+        through='IngredientRecipe',
+        blank=False,
+    )
+    tags = models.ManyToManyField(
+        to=Tag,
         through='TagRecipe',
-        blank=False
+        blank=False,
     )
 
     class Meta:
@@ -109,18 +113,20 @@ class Recipe(models.Model):
 
 
 class IngredientRecipe(models.Model):
-    ingredient = models.ForeignKey(Ingredient,
-                                   db_column='ingredient_id',
-                                   on_delete=models.SET_NULL,
-                                   blank=True,
-                                   null=True,
-                                   )
-    recipe = models.ForeignKey(Recipe,
-                               db_column='recipe_id',
-                               on_delete=models.SET_NULL,
-                               blank=True,
-                               null=True,
-                               )
+    ingredient = models.ForeignKey(
+        to=Ingredient,
+        db_column='ingredient_id',
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+    )
+    recipe = models.ForeignKey(
+        to=Recipe,
+        db_column='recipe_id',
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+    )
 
     class Meta:
         verbose_name = 'Ингредиент/Рецепт'
@@ -129,18 +135,20 @@ class IngredientRecipe(models.Model):
 
 
 class TagRecipe(models.Model):
-    tag = models.ForeignKey(Tag,
-                            db_column='tag_id',
-                            on_delete=models.SET_NULL,
-                            blank=False,
-                            null=True,
-                            )
-    recipe = models.ForeignKey(Recipe,
-                               db_column='recipe_id',
-                               on_delete=models.SET_NULL,
-                               blank=False,
-                               null=True,
-                               )
+    tag = models.ForeignKey(
+        to=Tag,
+        db_column='tag_id',
+        on_delete=models.SET_NULL,
+        blank=False,
+        null=True,
+    )
+    recipe = models.ForeignKey(
+        to=Recipe,
+        db_column='recipe_id',
+        on_delete=models.SET_NULL,
+        blank=False,
+        null=True,
+    )
 
     class Meta:
         verbose_name = 'Тег/Рецепт'
