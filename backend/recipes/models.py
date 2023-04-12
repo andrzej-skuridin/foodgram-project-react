@@ -1,5 +1,6 @@
 from django.core.validators import validate_slug, MaxLengthValidator, validate_integer
 from django.db import models
+from django.db.models import UniqueConstraint
 
 from recipes.validators import validate_cooking_time
 from users.models import User
@@ -90,11 +91,13 @@ class Recipe(models.Model):
         blank=False,
         null=True,
     )
+
     # image = models.ImageField(
     #     verbose_name='Картинка',
     #     # upload_to='posts/',
     #     blank=False
     # )
+
     ingredients = models.ManyToManyField(
         to=Ingredient,
         through='IngredientRecipe',
@@ -113,6 +116,7 @@ class Recipe(models.Model):
 
 
 class IngredientRecipe(models.Model):
+    amount = models.PositiveIntegerField()
     ingredient = models.ForeignKey(
         to=Ingredient,
         db_column='ingredient_id',
@@ -132,6 +136,12 @@ class IngredientRecipe(models.Model):
         verbose_name = 'Ингредиент/Рецепт'
         verbose_name_plural = 'Ингредиенты/Рецепты'
         ordering = ('-id',)
+        constraints = [
+            UniqueConstraint(
+                fields=['recipe', 'ingredient'],
+                name='unique_ingredients_in_recipe'
+            )
+        ]
 
 
 class TagRecipe(models.Model):
@@ -154,3 +164,39 @@ class TagRecipe(models.Model):
         verbose_name = 'Тег/Рецепт'
         verbose_name_plural = 'Теги/Рецепты'
         ordering = ('-id',)
+
+
+class Favorite(models.Model):
+    follower = models.ForeignKey(
+        to=User,
+        related_name='favorites',
+        on_delete=models.CASCADE,
+        verbose_name='Подписчик на рецепт',
+        null=True,
+    )
+    recipe_key = models.ForeignKey(
+        to=Recipe,
+        verbose_name='В избранном',
+        related_name='in_favorites',
+        on_delete=models.CASCADE,
+        null=True,
+    )
+    name = models.CharField(
+        verbose_name='Название избранного блюда',
+        max_length=200,
+        validators=[MaxLengthValidator(limit_value=200)],
+        help_text='Required. 200 characters or fewer.',
+        blank=False,
+        null=True,
+    )
+    # image = HyperLinkField???
+    cooking_time = models.IntegerField(
+        verbose_name='Время приготовления',
+        max_length=10,
+        validators=[MaxLengthValidator(limit_value=10),
+                    validate_cooking_time,
+                    validate_integer],
+        blank=False,
+        help_text='Required. 10 characters or fewer.',
+        null=True,
+    )

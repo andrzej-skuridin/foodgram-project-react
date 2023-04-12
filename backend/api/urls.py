@@ -4,8 +4,8 @@ from rest_framework import routers
 from api.views import (
     TagViewSet,
     IngredientViewSet,
-    RecipeViewSet
-    )
+    RecipeViewSet, FavoriteViewSet
+)
 
 router = routers.DefaultRouter()
 
@@ -24,6 +24,10 @@ router.register(
     basename='recipes',
     viewset=RecipeViewSet
 )
+router.register(
+    r'recipes/(?P<recipe_id>\d+)/favorite',
+    FavoriteViewSet,
+    basename='favorite')
 
 urlpatterns = [
     path('', include(router.urls)),

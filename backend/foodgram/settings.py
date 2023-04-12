@@ -150,6 +150,7 @@ REST_FRAMEWORK = {
 
 DJOSER = {
     'HIDE_USERS': False,
+    # 'LOGIN_FIELD': 'email',  # не фурычит
 
     'PERMISSIONS': {
         'user_list': ['api.permissions.AuthenticatedOrReadOnly'],

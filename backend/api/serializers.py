@@ -1,14 +1,15 @@
 from django.contrib.auth.hashers import make_password
 from django.core.validators import MaxLengthValidator
+from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework.fields import CharField
 
 from recipes.models import (
     Tag,
     Ingredient,
-    Recipe
+    Recipe, IngredientRecipe, Favorite
 )
-from users.models import User
+from users.models import User, Subscription
 
 
 class UserGETSerializer(serializers.ModelSerializer):
@@ -45,11 +46,45 @@ class IngredientSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class RecipeListSerializer(serializers.ModelSerializer):
+class IngredientRecipeSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = IngredientRecipe
+        fields = '__all__'
+
+
+class RecipeListRetrieveSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, required=True)
     author = UserGETSerializer(many=False, required=True)
-    ingredients = IngredientSerializer(many=True, required=True)
+    ingredients = IngredientSerializer(many=True, required=True)  # так работает, но без amount
+    is_favorited = serializers.SerializerMethodField()
+    # is_in_shopping_cart
+    # ingredients = IngredientRecipeSerializer(many=True, required=True)  # включить, когда буду делать amount
 
     class Meta:
         model = Recipe
+        fields = '__all__'
+
+    def get_is_favorited(self, obj):
+        if Favorite.objects.filter(recipe_key_id=obj.id).exists():
+            return self.context.get('request').user.id == get_object_or_404(Favorite, recipe_key_id=obj.id).follower.id
+        return False
+
+
+
+class FavoriteSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Favorite
+        fields = ('id',
+                  'name',
+                  #'image',
+                  'cooking_time',
+                  )
+
+
+class SubscriptionSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Subscription
         fields = '__all__'

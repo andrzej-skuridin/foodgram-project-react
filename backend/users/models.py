@@ -38,12 +38,28 @@ class User(AbstractUser):
         help_text='Required. 150 characters or fewer.'
     )
 
-    # is_subscribed = models.CharField(
-    #     max_length=10,
-    #     blank=False
-    # )
 
     class Meta:
         verbose_name = 'Пользователь'
         verbose_name_plural = 'Пользователи'
         ordering = ['-username']
+
+
+class Subscription(models.Model):
+    author = models.ForeignKey(
+        to=User,
+        on_delete=models.CASCADE,
+        verbose_name='Автор',
+        related_name='in_subscriptions',
+    )
+
+    follower = models.ForeignKey(
+        to=User,
+        on_delete=models.CASCADE,
+        verbose_name='Подписчик',
+        related_name='subscriptions',
+    )
+
+    class Meta:
+        verbose_name = 'Подписка'
+        verbose_name_plural = 'Подписки'
