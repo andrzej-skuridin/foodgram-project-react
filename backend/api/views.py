@@ -1,4 +1,5 @@
 from django.shortcuts import get_object_or_404
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, serializers
 from rest_framework import mixins, viewsets
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -10,13 +11,14 @@ from api.serializers import (
     TagSerializer,
     IngredientSerializer,
     FavoriteSerializer,
-    RecipeListRetrieveSerializer,
+    RecipeListRetrieveSerializer, RecipeCreatePatchSerializer, SubscriptionSerializer,
 )
 from recipes.models import (
     Tag,
     Ingredient,
     Recipe, Favorite
 )
+from users.models import Subscription
 
 
 class TagViewSet(mixins.ListModelMixin,
@@ -44,19 +46,25 @@ class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
     permission_classes = [RecipePermission]
 
+    filter_backends = (DjangoFilterBackend,)  # нужно написать свой фильтр, этот не работает
+    search_fields = ('author_username',
+                     'is_favorited',
+                     'tags',
+                     # 'is_in_shopping_cart',
+                     )
+
     def get_serializer_class(self):
         if self.action in ('list', 'retrieve'):
             return RecipeListRetrieveSerializer  # GET/list
+        if self.action in ('create', 'update'):
+            return RecipeCreatePatchSerializer  # сломано
         return RecipeListRetrieveSerializer
-    #     if self.action in ('retrieve', 'destroy'):
-    #         return RecipeRetrieveSerializer  # GET/retrieve or ?POST/destroy?
-    #     if self.action == 'update':
-    #         return RecipeUpdateSerializer  # POST/create or PATCH/update
 
 
 class FavoriteViewSet(mixins.CreateModelMixin,
                       mixins.DestroyModelMixin,
                       viewsets.GenericViewSet):
+    http_method_names = ['get', 'post', 'delete']
     serializer_class = FavoriteSerializer
     permission_classes = IsAuthenticated,
 
@@ -101,3 +109,21 @@ class FavoriteViewSet(mixins.CreateModelMixin,
                         cooking_time=recipe.cooking_time,
                         recipe_key=recipe
                         )
+
+
+class SubscriptionListViewSet(mixins.ListModelMixin,
+                              viewsets.GenericViewSet):
+    serializer_class = SubscriptionSerializer
+    permission_classes = IsAuthenticated,
+
+    def get_queryset(self):
+        me = self.request.user
+        new_queryset = Subscription.objects.filter(follower=me)
+        return new_queryset
+
+
+class SubscriptionAddDeleteViewSet(mixins.CreateModelMixin,
+                                   mixins.DestroyModelMixin,
+                                   viewsets.GenericViewSet):
+    serializer_class = SubscriptionSerializer
+    permission_classes = IsAuthenticated,

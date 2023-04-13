@@ -13,7 +13,7 @@ from users.models import User, Subscription
 
 
 class UserGETSerializer(serializers.ModelSerializer):
-    # is_subscribed = serializers.SerializerMethodField()
+    is_subscribed = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -23,13 +23,15 @@ class UserGETSerializer(serializers.ModelSerializer):
             'username',
             'first_name',
             'last_name',
-            # 'is_subscribed'
+            'is_subscribed',
         )
 
-    # def is_subscribed(self, data, request):
-    #     current_user = request.user.username
-    #     author = data['username']
-    #     return current_user == author
+    def get_is_subscribed(self, data):
+        current_user = self.context.get('request').user.id
+        author = data.id
+        return Subscription.objects.filter(
+            follower_id=current_user, author_id=author).exists()
+
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -67,10 +69,16 @@ class RecipeListRetrieveSerializer(serializers.ModelSerializer):
 
     def get_is_favorited(self, obj):
         if Favorite.objects.filter(recipe_key_id=obj.id).exists():
-            return self.context.get('request').user.id == get_object_or_404(Favorite, recipe_key_id=obj.id).follower.id
+            return self.context.get('request').user.id == get_object_or_404(
+                Favorite, recipe_key_id=obj.id).follower.id
         return False
 
 
+class RecipeCreatePatchSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Recipe
+        fields = '__all__'
 
 class FavoriteSerializer(serializers.ModelSerializer):
 
@@ -84,7 +92,8 @@ class FavoriteSerializer(serializers.ModelSerializer):
 
 
 class SubscriptionSerializer(serializers.ModelSerializer):
+    author = UserGETSerializer(many=False, required=True)
 
     class Meta:
         model = Subscription
-        fields = '__all__'
+        fields = ('author',)

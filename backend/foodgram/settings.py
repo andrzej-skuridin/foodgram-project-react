@@ -155,6 +155,7 @@ DJOSER = {
     'PERMISSIONS': {
         'user_list': ['api.permissions.AuthenticatedOrReadOnly'],
         'user_create': ['rest_framework.permissions.AllowAny'],
+        'user': ['api.permissions.AuthenticatedOrReadOnly'],
     },
 
     'SERIALIZERS': {
