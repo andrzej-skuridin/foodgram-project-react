@@ -33,23 +33,19 @@ class UserGETSerializer(serializers.ModelSerializer):
             follower_id=current_user, author_id=author).exists()
 
 
-
 class TagSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Tag
         fields = '__all__'
 
 
 class IngredientSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Ingredient
         fields = '__all__'
 
 
 class IngredientRecipeSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = IngredientRecipe
         fields = '__all__'
@@ -60,6 +56,7 @@ class RecipeListRetrieveSerializer(serializers.ModelSerializer):
     author = UserGETSerializer(many=False, required=True)
     ingredients = IngredientSerializer(many=True, required=True)  # так работает, но без amount
     is_favorited = serializers.SerializerMethodField()
+
     # is_in_shopping_cart
     # ingredients = IngredientRecipeSerializer(many=True, required=True)  # включить, когда буду делать amount
 
@@ -74,26 +71,51 @@ class RecipeListRetrieveSerializer(serializers.ModelSerializer):
         return False
 
 
-class RecipeCreatePatchSerializer(serializers.ModelSerializer):
+class UserInSubscriptionSerializer(UserGETSerializer):
+    recipes = serializers.SerializerMethodField()
+    recipes_count = serializers.SerializerMethodField()
 
+    class Meta:
+        model = User
+        fields = (
+            'email',
+            'id',
+            'username',
+            'first_name',
+            'last_name',
+            'is_subscribed',
+            'recipes',
+            'recipes_count',
+        )
+
+    def get_recipes(self, data):
+        author_id = data.id
+        recipes_queryset = Recipe.objects.filter(author_id=author_id)
+        return recipes_queryset.values()
+
+    def get_recipes_count(self, data):
+        return len(Recipe.objects.filter(author_id=data.id))
+
+
+class RecipeCreatePatchSerializer(serializers.ModelSerializer):
     class Meta:
         model = Recipe
         fields = '__all__'
 
-class FavoriteSerializer(serializers.ModelSerializer):
 
+class FavoriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Favorite
         fields = ('id',
                   'name',
-                  #'image',
+                  # 'image',
                   'cooking_time',
                   )
 
 
 class SubscriptionSerializer(serializers.ModelSerializer):
-    author = UserGETSerializer(many=False, required=True)
+    author = UserInSubscriptionSerializer(many=False, required=True)
 
     class Meta:
         model = Subscription
-        fields = ('author',)
+        fields = '__all__'

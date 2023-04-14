@@ -1,6 +1,7 @@
 from django.core.validators import validate_slug, MaxLengthValidator, validate_integer
 from django.db import models
 from django.db.models import UniqueConstraint
+from rest_framework.fields import CurrentUserDefault
 
 from recipes.validators import validate_cooking_time
 from users.models import User
@@ -65,7 +66,6 @@ class Recipe(models.Model):
         related_name='recipes_by_this_author',
         verbose_name='Автор',
         blank=False,
-        null=True,
     )
     cooking_time = models.IntegerField(
         verbose_name='Время приготовления',

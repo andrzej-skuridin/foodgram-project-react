@@ -156,6 +156,8 @@ DJOSER = {
         'user_list': ['api.permissions.AuthenticatedOrReadOnly'],
         'user_create': ['rest_framework.permissions.AllowAny'],
         'user': ['api.permissions.AuthenticatedOrReadOnly'],
+        'token_create': ['rest_framework.permissions.AllowAny'],
+        'token_destroy': ['rest_framework.permissions.IsAuthenticated'],
     },
 
     'SERIALIZERS': {

@@ -7,7 +7,7 @@ from api.views import (
     RecipeViewSet,
     FavoriteViewSet,
     SubscriptionListViewSet,
-    SubscriptionAddDeleteViewSet
+    # SubscriptionAddDeleteViewSet
 )
 
 router = routers.DefaultRouter()
@@ -37,11 +37,11 @@ router.register(
     viewset=SubscriptionListViewSet,
     basename='favorite'
 )
-router.register(
-    prefix=r'users/(?P<user_id>\d+)/subscriptions',
-    viewset=SubscriptionAddDeleteViewSet,
-    basename='favorite'
-)
+# router.register(
+#     prefix=r'users/(?P<user_id>\d+)/subscribe',
+#     viewset=SubscriptionAddDeleteViewSet,
+#     basename='subscribe'
+# )
 
 urlpatterns = [
     path('', include(router.urls)),

@@ -3,6 +3,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, serializers
 from rest_framework import mixins, viewsets
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
 
 from api.permissions import (
     RecipePermission,
@@ -11,14 +12,16 @@ from api.serializers import (
     TagSerializer,
     IngredientSerializer,
     FavoriteSerializer,
-    RecipeListRetrieveSerializer, RecipeCreatePatchSerializer, SubscriptionSerializer,
+    RecipeListRetrieveSerializer,
+    RecipeCreatePatchSerializer,
+    SubscriptionSerializer, UserGETSerializer, UserInSubscriptionSerializer,
 )
 from recipes.models import (
     Tag,
     Ingredient,
     Recipe, Favorite
 )
-from users.models import Subscription
+from users.models import Subscription, User
 
 
 class TagViewSet(mixins.ListModelMixin,
@@ -61,23 +64,22 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return RecipeListRetrieveSerializer
 
 
-class FavoriteViewSet(mixins.CreateModelMixin,
-                      mixins.DestroyModelMixin,
-                      viewsets.GenericViewSet):
-    http_method_names = ['get', 'post', 'delete']
+class FavoriteViewSet(viewsets.ModelViewSet):
+    http_method_names = ['post', 'delete']
     serializer_class = FavoriteSerializer
     permission_classes = IsAuthenticated,
 
-    def get_queryset(self):
-        recipe_id = self.kwargs.get('recipe_id')
-        new_queryset = Favorite.objects.filter(recipe_key=recipe_id)
-        return new_queryset
+    # Это раскоментить для тестов через GET
+    # def get_queryset(self):
+    #     recipe_id = self.kwargs.get('recipe_id')
+    #     new_queryset = Favorite.objects.filter(recipe_key=recipe_id)
+    #     return new_queryset
 
     # не работает удаление из избранного!
     def perform_destroy(self, instance):
         recipe_id = self.kwargs.get('recipe_id')
 
-        # проверка, что такой Favorite уже в БД
+        # проверка, что такой Favorite существует в БД
         queryset = Favorite.objects.filter(
             follower=self.request.user,
             recipe_key=recipe_id
@@ -113,17 +115,57 @@ class FavoriteViewSet(mixins.CreateModelMixin,
 
 class SubscriptionListViewSet(mixins.ListModelMixin,
                               viewsets.GenericViewSet):
-    serializer_class = SubscriptionSerializer
+    serializer_class = UserInSubscriptionSerializer
     permission_classes = IsAuthenticated,
 
     def get_queryset(self):
         me = self.request.user
-        new_queryset = Subscription.objects.filter(follower=me)
+        # этот queryset выдаёт набор id авторов, на которых подписан пользователь
+        author_id_queryset = Subscription.objects.filter(follower=me).values_list(
+            'author_id', flat=True).order_by('id')
+        # см. документацию по Field lookups из object.filter
+        new_queryset = User.objects.filter(id__in=author_id_queryset)
         return new_queryset
 
 
-class SubscriptionAddDeleteViewSet(mixins.CreateModelMixin,
-                                   mixins.DestroyModelMixin,
-                                   viewsets.GenericViewSet):
-    serializer_class = SubscriptionSerializer
-    permission_classes = IsAuthenticated,
+# class SubscriptionAddDeleteViewSet(mixins.CreateModelMixin,
+#                                    mixins.DestroyModelMixin,
+#                                    viewsets.GenericViewSet):
+#     serializer_class = UserGETSerializer
+#     permission_classes = IsAuthenticated,
+#
+#     def perform_create(self, serializer):
+#         author_id = self.kwargs.get('user_id')
+#         author = get_object_or_404(User, id=author_id)
+#
+#         # проверка, что такого Subscription уже нет в БД
+#         queryset = Subscription.objects.filter(
+#             follower=self.request.user,
+#             author_id=author_id
+#         )
+#         if len(queryset) > 0:
+#             raise serializers.ValidationError(
+#                 'Вы уже подписаны на этого автора!'
+#             )
+#
+#
+#         # запись нового объекта Favorite
+#         serializer.save(follower=self.request.user,
+#                         author=author
+#                         )
+#
+#         return Response(serializer.data, status=status.HTTP_200_OK)
+#
+# #########
+#     def me(self, request):
+#         if request.method == "GET":
+#             serializer = UserSerializer(request.user)
+#             return Response(serializer.data)
+#         serializer = UserSerializer(
+#             request.user,
+#             data=request.data,
+#             partial=True
+#         )
+#         serializer.is_valid(raise_exception=True)
+#         serializer.save(role=request.user.role)
+#         return Response(serializer.data, status=status.HTTP_200_OK)
