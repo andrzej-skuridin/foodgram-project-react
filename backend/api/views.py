@@ -1,7 +1,8 @@
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, serializers
+from rest_framework import filters, serializers, status
 from rest_framework import mixins, viewsets
+from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
@@ -14,7 +15,9 @@ from api.serializers import (
     FavoriteSerializer,
     RecipeListRetrieveSerializer,
     RecipeCreatePatchSerializer,
-    SubscriptionSerializer, UserGETSerializer, UserInSubscriptionSerializer,
+    SubscriptionSerializer,
+    UserGETSerializer,
+    UserInSubscriptionSerializer,
 )
 from recipes.models import (
     Tag,
@@ -68,6 +71,7 @@ class FavoriteViewSet(viewsets.ModelViewSet):
     http_method_names = ['post', 'delete']
     serializer_class = FavoriteSerializer
     permission_classes = IsAuthenticated,
+    queryset = Favorite.objects.all()
 
     # Это раскоментить для тестов через GET
     # def get_queryset(self):
@@ -113,10 +117,10 @@ class FavoriteViewSet(viewsets.ModelViewSet):
                         )
 
 
-class SubscriptionListViewSet(mixins.ListModelMixin,
-                              viewsets.GenericViewSet):
-    serializer_class = UserInSubscriptionSerializer
+class SubscriptionViewSet(viewsets.ModelViewSet):
+    http_method_names = ['get', 'post', 'delete']
     permission_classes = IsAuthenticated,
+    serializer_class = UserInSubscriptionSerializer
 
     def get_queryset(self):
         me = self.request.user
@@ -127,45 +131,24 @@ class SubscriptionListViewSet(mixins.ListModelMixin,
         new_queryset = User.objects.filter(id__in=author_id_queryset)
         return new_queryset
 
-
-# class SubscriptionAddDeleteViewSet(mixins.CreateModelMixin,
-#                                    mixins.DestroyModelMixin,
-#                                    viewsets.GenericViewSet):
-#     serializer_class = UserGETSerializer
-#     permission_classes = IsAuthenticated,
-#
-#     def perform_create(self, serializer):
-#         author_id = self.kwargs.get('user_id')
-#         author = get_object_or_404(User, id=author_id)
-#
-#         # проверка, что такого Subscription уже нет в БД
-#         queryset = Subscription.objects.filter(
-#             follower=self.request.user,
-#             author_id=author_id
-#         )
-#         if len(queryset) > 0:
-#             raise serializers.ValidationError(
-#                 'Вы уже подписаны на этого автора!'
-#             )
-#
-#
-#         # запись нового объекта Favorite
-#         serializer.save(follower=self.request.user,
-#                         author=author
-#                         )
-#
-#         return Response(serializer.data, status=status.HTTP_200_OK)
-#
-# #########
-#     def me(self, request):
-#         if request.method == "GET":
-#             serializer = UserSerializer(request.user)
-#             return Response(serializer.data)
-#         serializer = UserSerializer(
-#             request.user,
-#             data=request.data,
-#             partial=True
-#         )
-#         serializer.is_valid(raise_exception=True)
-#         serializer.save(role=request.user.role)
-#         return Response(serializer.data, status=status.HTTP_200_OK)
+    @action(
+        methods=('post',),
+        url_path=r'users/(?P<user_pk>\d+)',
+        detail=False,
+    )
+    def subscribe(self, serializer):  # perform_create
+        author_id = self.kwargs.get('user_id')
+        author = get_object_or_404(User, id=author_id)
+        # проверка, что такого Subscription уже нет в БД
+        queryset = Subscription.objects.filter(
+            follower=self.request.user,
+            author_id=author_id
+        )
+        if len(queryset) > 0:
+            raise serializers.ValidationError(
+                'Вы уже подписаны на этого автора!'
+            )
+        # запись нового объекта Subscription
+        serializer.save(follower=self.request.user,
+                        author=author
+                        )

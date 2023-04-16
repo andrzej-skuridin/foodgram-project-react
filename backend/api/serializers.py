@@ -3,6 +3,7 @@ from django.core.validators import MaxLengthValidator
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework.fields import CharField
+from rest_framework.permissions import IsAuthenticated, AllowAny
 
 from recipes.models import (
     Tag,
@@ -33,6 +34,13 @@ class UserGETSerializer(serializers.ModelSerializer):
             follower_id=current_user, author_id=author).exists()
 
 
+class UserGETmeSerializer(UserGETSerializer):
+    """Этот сериалайзер должен не допускать анонима к endpoint /me/,
+    но почему-то всё равно допускает и выдаёт ошибку из-за незаполнения полей
+    см. settings"""
+    permission_classes = IsAuthenticated,
+
+
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
@@ -46,19 +54,40 @@ class IngredientSerializer(serializers.ModelSerializer):
 
 
 class IngredientRecipeSerializer(serializers.ModelSerializer):
+    # я знаю, что это дикое извращение, но иначе у меня не получается
+    # понимаю, что вместо метод-филдов нужно сериализатор применить,
+    # но что-то он не применяется
+    measurement_unit = serializers.SerializerMethodField()
+    name = serializers.SerializerMethodField()
+
     class Meta:
         model = IngredientRecipe
-        fields = '__all__'
+        fields = (
+            'id',
+            'name',
+            'measurement_unit',
+            'amount',
+        )
+
+    def get_measurement_unit(self, obj):
+        ingredient_id = obj.get('ingredient_id')
+        ingredient_info = Ingredient.objects.filter(id=ingredient_id)
+        # first() иначе вернёт в виде списка из 1 элемента
+        return ingredient_info.values_list('measurement_unit', flat=True).first()
+
+    def get_name(self, obj):
+        ingredient_id = obj.get('ingredient_id')
+        ingredient_info = Ingredient.objects.filter(id=ingredient_id)
+        # first() иначе вернёт в виде списка из 1 элемента
+        return ingredient_info.values_list('name', flat=True).first()
 
 
 class RecipeListRetrieveSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, required=True)
     author = UserGETSerializer(many=False, required=True)
-    ingredients = IngredientSerializer(many=True, required=True)  # так работает, но без amount
+    ingredients = serializers.SerializerMethodField()
     is_favorited = serializers.SerializerMethodField()
-
     # is_in_shopping_cart
-    # ingredients = IngredientRecipeSerializer(many=True, required=True)  # включить, когда буду делать amount
 
     class Meta:
         model = Recipe
@@ -69,6 +98,10 @@ class RecipeListRetrieveSerializer(serializers.ModelSerializer):
             return self.context.get('request').user.id == get_object_or_404(
                 Favorite, recipe_key_id=obj.id).follower.id
         return False
+
+    def get_ingredients(self, obj):
+        ings = IngredientRecipe.objects.filter(recipe_id=obj.id).all().values()
+        return IngredientRecipeSerializer(ings, many=True).data
 
 
 class UserInSubscriptionSerializer(UserGETSerializer):
@@ -98,6 +131,8 @@ class UserInSubscriptionSerializer(UserGETSerializer):
 
 
 class RecipeCreatePatchSerializer(serializers.ModelSerializer):
+    """TBA"""
+
     class Meta:
         model = Recipe
         fields = '__all__'

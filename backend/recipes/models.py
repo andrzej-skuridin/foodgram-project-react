@@ -116,9 +116,12 @@ class Recipe(models.Model):
 
 
 class IngredientRecipe(models.Model):
-    amount = models.PositiveIntegerField()
+    amount = models.PositiveIntegerField(
+        verbose_name='Количество'
+    )
     ingredient = models.ForeignKey(
         to=Ingredient,
+        related_name='ingredient_recipe_table_ingredient',
         db_column='ingredient_id',
         on_delete=models.SET_NULL,
         blank=True,
@@ -126,6 +129,7 @@ class IngredientRecipe(models.Model):
     )
     recipe = models.ForeignKey(
         to=Recipe,
+        related_name='ingredient_recipe_table_recipe',
         db_column='recipe_id',
         on_delete=models.SET_NULL,
         blank=True,
