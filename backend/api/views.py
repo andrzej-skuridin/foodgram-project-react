@@ -71,16 +71,20 @@ class FavoriteViewSet(viewsets.ModelViewSet):
     http_method_names = ['post', 'delete']
     serializer_class = FavoriteSerializer
     permission_classes = IsAuthenticated,
-    queryset = Favorite.objects.all()
 
-    # Это раскоментить для тестов через GET
-    # def get_queryset(self):
-    #     recipe_id = self.kwargs.get('recipe_id')
-    #     new_queryset = Favorite.objects.filter(recipe_key=recipe_id)
-    #     return new_queryset
+    def get_queryset(self):
+        recipe_id = self.kwargs.get('recipe_id')
+        new_queryset = Favorite.objects.filter(
+            recipe_key=recipe_id)
+        return new_queryset
 
-    # не работает удаление из избранного!
-    def perform_destroy(self, instance):
+    @action(detail=False,
+            methods=('delete',),
+            permission_classes=IsAuthenticated,
+            url_path='')
+    def delete(self, request, *args, **kwargs):
+        # стандартный viewset разрешает метод delete только на something/id/
+        # поэтому если /something/something_else, придётся @action писать
         recipe_id = self.kwargs.get('recipe_id')
 
         # проверка, что такой Favorite существует в БД
@@ -94,6 +98,7 @@ class FavoriteViewSet(viewsets.ModelViewSet):
             )
 
         Favorite.objects.filter(recipe_key=recipe_id).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def perform_create(self, serializer):
         recipe_id = self.kwargs.get('recipe_id')
@@ -117,6 +122,8 @@ class FavoriteViewSet(viewsets.ModelViewSet):
                         )
 
 
+
+
 class SubscriptionViewSet(viewsets.ModelViewSet):
     http_method_names = ['get', 'post', 'delete']
     permission_classes = IsAuthenticated,
@@ -136,7 +143,7 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
         url_path=r'users/(?P<user_pk>\d+)',
         detail=False,
     )
-    def subscribe(self, serializer):  # perform_create
+    def q1(self, serializer):  # perform_create
         author_id = self.kwargs.get('user_id')
         author = get_object_or_404(User, id=author_id)
         # проверка, что такого Subscription уже нет в БД
@@ -152,3 +159,29 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
         serializer.save(follower=self.request.user,
                         author=author
                         )
+
+    @action(detail=False,
+            methods=('delete',),
+            permission_classes=IsAuthenticated,
+            # url /subscribe/ обрабатывается в urls.py, видимо поэтому
+            # работает при таком пути
+            url_path=r'users/(?P<user_pk>\d+)/',
+            )
+    def delete(self, request, *args, **kwargs):
+        # стандартный viewset разрешает метод delete только на something/id/
+        # поэтому если /something/something_else, придётся @action писать
+        author_id = self.kwargs.get('user_id')
+
+        # проверка, что такая Subscription существует в БД
+        queryset = Subscription.objects.filter(
+            follower=self.request.user,
+            author_id=author_id
+        )
+        if len(queryset) == 0:
+            raise serializers.ValidationError(
+                'Вы не подписаны на этого автора!'
+            )
+
+        Subscription.objects.filter(
+            follower=self.request.user, author_id=author_id).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
