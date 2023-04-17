@@ -138,12 +138,13 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
         new_queryset = User.objects.filter(id__in=author_id_queryset)
         return new_queryset
 
-    @action(
-        methods=('post',),
-        url_path=r'users/(?P<user_pk>\d+)',
-        detail=False,
-    )
-    def q1(self, serializer):  # perform_create
+    # @action(
+    #     methods=('post',),
+    #     url_path=r'users/(?P<user_pk>\d+)',
+    #     detail=False,
+    # )
+    def create(self, request, *args, **kwargs):  # perform_create
+        # конфликтует с созданием User через Djoser
         author_id = self.kwargs.get('user_id')
         author = get_object_or_404(User, id=author_id)
         # проверка, что такого Subscription уже нет в БД
@@ -156,9 +157,11 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
                 'Вы уже подписаны на этого автора!'
             )
         # запись нового объекта Subscription
-        serializer.save(follower=self.request.user,
-                        author=author
-                        )
+        Subscription.objects.create(
+            follower=self.request.user,
+            author_id=author_id
+        )
+        return Response(status=status.HTTP_201_CREATED)
 
     @action(detail=False,
             methods=('delete',),
@@ -168,6 +171,8 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
             url_path=r'users/(?P<user_pk>\d+)/',
             )
     def delete(self, request, *args, **kwargs):
+        # почему-то называть надо именно delete
+        # (сработает ли perform_destroy, проверить)
         # стандартный viewset разрешает метод delete только на something/id/
         # поэтому если /something/something_else, придётся @action писать
         author_id = self.kwargs.get('user_id')

@@ -7,7 +7,6 @@ from api.views import (
     RecipeViewSet,
     FavoriteViewSet,
     SubscriptionViewSet,
-    # SubscriptionAddDeleteViewSet,
 )
 
 router = routers.DefaultRouter()
