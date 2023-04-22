@@ -156,18 +156,18 @@ DJOSER = {
         'user_list': ['rest_framework.permissions.AllowAny'],  # отвечает за список юзеров
         # 'user_list': ['rest_framework.permissions.IsAdminUser'],
         'user_create': ['rest_framework.permissions.AllowAny'],
-        'user': ['api.permissions.AuthenticatedOrReadOnly'],  # отвечает за RETRIEVE single user, users/me
+        'user': ['rest_framework.permissions.AllowAny'],  # отвечает за RETRIEVE single user, users/me
         # 'user': ['rest_framework.permissions.IsAdminUser'],
         'token_create': ['rest_framework.permissions.AllowAny'],
         'token_destroy': ['rest_framework.permissions.IsAuthenticated'],
         # 'current_user': ['rest_framework.permissions.IsAdminUser'], # похоже нет эффекта
     },
 
-    'SERIALIZERS': {
-        'user': 'api.serializers.UserGETSerializer',
-        # 'current_user': 'api.serializers.UserGETSerializer,
-        # /users/me   /users/id/  ошибка у анонима
-        'current_user': 'api.serializers.UserGETmeSerializer',
-    },
+    # 'SERIALIZERS': {
+    #     #'user': 'api.serializers.UserGETSerializer',
+    #     # 'current_user': 'api.serializers.UserGETSerializer,
+    #     # /users/me   /users/id/  ошибка у анонима
+    #     #'current_user': 'api.serializers.UserGETmeSerializer',
+    # },
 
 }
