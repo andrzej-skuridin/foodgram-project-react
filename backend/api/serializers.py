@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from recipes.models import Ingredient, RecipeIngredient, Recipe
+from recipes.models import Ingredient, RecipeIngredient, Recipe, RecipeTag, Tag
 
 
 class RecipeIngredientSerializer(serializers.ModelSerializer):
@@ -20,9 +20,32 @@ class RecipeIngredientSerializer(serializers.ModelSerializer):
         fields = ('amount', 'name', 'measurement_unit', 'id')
 
 
+class RecipeTagSerializer(serializers.ModelSerializer):
+    id = serializers.PrimaryKeyRelatedField(
+        source='tag',
+        queryset=Tag.objects.all()
+    )
+    name = serializers.StringRelatedField(
+        source='tag.name'
+    )
+    color = serializers.StringRelatedField(
+        source='tag.color'
+    )
+    slug = serializers.SlugRelatedField(
+        source='tag',
+        slug_field='slug',
+        queryset=Tag.objects.all()
+    )
+
+    class Meta:
+        model = RecipeTag
+        fields = ('id', 'name', 'color', 'slug')
+
+
 class RecipeListSerializer(serializers.ModelSerializer):
     """Получение списка рецептов."""
 
+    tags = serializers.SerializerMethodField()
     ingredients = serializers.SerializerMethodField()
     is_favorite = serializers.BooleanField()
 
@@ -32,9 +55,15 @@ class RecipeListSerializer(serializers.ModelSerializer):
             RecipeIngredient.objects.filter(recipe=obj).all(), many=True
         ).data
 
+    def get_tags(self, obj):
+        """Возвращает отдельный сериализатор."""
+        return RecipeTagSerializer(
+            RecipeTag.objects.filter(recipe_id=obj).all(), many=True
+        ).data
+
     class Meta:
         model = Recipe
-        fields = ('name', 'ingredients', 'is_favorite', 'text')
+        fields = ('name', 'ingredients', 'is_favorite', 'text', 'tags')
 
 
 class IngredientCreateInRecipeSerializer(serializers.ModelSerializer):
