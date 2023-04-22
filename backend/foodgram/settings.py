@@ -137,7 +137,7 @@ AUTH_USER_MODEL = 'users.User'
 
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
-            'rest_framework.permissions.IsAuthenticated',
+            'rest_framework.permissions.AllowAny',
         ],
 
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -154,13 +154,10 @@ DJOSER = {
 
     'PERMISSIONS': {
         'user_list': ['rest_framework.permissions.AllowAny'],  # отвечает за список юзеров
-        # 'user_list': ['rest_framework.permissions.IsAdminUser'],
         'user_create': ['rest_framework.permissions.AllowAny'],
-        'user': ['rest_framework.permissions.AllowAny'],  # отвечает за RETRIEVE single user, users/me
-        # 'user': ['rest_framework.permissions.IsAdminUser'],
+        'user': ['djoser.permissions.CurrentUserOrAdminOrReadOnly'],  # отвечает за RETRIEVE single user, users/me
         'token_create': ['rest_framework.permissions.AllowAny'],
         'token_destroy': ['rest_framework.permissions.IsAuthenticated'],
-        # 'current_user': ['rest_framework.permissions.IsAdminUser'], # похоже нет эффекта
     },
 
     # 'SERIALIZERS': {

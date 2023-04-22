@@ -103,7 +103,7 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
     """Сериализатор создания/обновления рецепта."""
 
     ingredients = IngredientCreateInRecipeSerializer(many=True)
-    tags = serializers.ListField(min_length=1) #TagCreateInRecipeSerializer(many=True)
+    tags = serializers.ListField(min_length=1)
 
     def validate_ingredients(self, value):
         if len(value) < 1:
