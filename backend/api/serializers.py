@@ -4,6 +4,8 @@ from recipes.models import Ingredient, RecipeIngredient, Recipe, RecipeTag, Tag
 
 
 class RecipeIngredientSerializer(serializers.ModelSerializer):
+    """Сериализатор таблицы связи."""
+
     name = serializers.StringRelatedField(
         source='ingredient.name'
     )
@@ -21,6 +23,8 @@ class RecipeIngredientSerializer(serializers.ModelSerializer):
 
 
 class RecipeTagSerializer(serializers.ModelSerializer):
+    """Сериализатор таблицы связи."""
+
     id = serializers.PrimaryKeyRelatedField(
         source='tag',
         queryset=Tag.objects.all()
@@ -67,6 +71,8 @@ class RecipeListSerializer(serializers.ModelSerializer):
 
 
 class IngredientCreateInRecipeSerializer(serializers.ModelSerializer):
+    """Сериализатор ингредиентов в создании рецепта."""
+
     recipe = serializers.PrimaryKeyRelatedField(read_only=True)
     id = serializers.PrimaryKeyRelatedField(
         source='ingredient',
@@ -79,8 +85,25 @@ class IngredientCreateInRecipeSerializer(serializers.ModelSerializer):
         fields = ('recipe', 'id', 'amount')
 
 
+class TagCreateInRecipeSerializer(serializers.ModelSerializer):
+    """Сериализатор тегов в создании рецепта."""
+
+    id = serializers.PrimaryKeyRelatedField(
+        source='tag',
+        queryset=Tag.objects.all()
+    )
+    recipe = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+        model = RecipeTag
+        fields = ('recipe', 'id')
+
+
 class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
+    """Сериализатор создания/обновления рецепта."""
+
     ingredients = IngredientCreateInRecipeSerializer(many=True)
+    tags = serializers.ListField(min_length=1) #TagCreateInRecipeSerializer(many=True)
 
     def validate_ingredients(self, value):
         if len(value) < 1:
@@ -89,6 +112,7 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         ingredients = validated_data.pop('ingredients')
+        tags = validated_data.pop('tags')
         recipe = Recipe.objects.create(**validated_data)
 
         create_ingredients = [
@@ -99,9 +123,23 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
             )
             for ingredient in ingredients
         ]
+
+        create_tags = [
+            RecipeTag(
+                recipe=recipe,
+                tag=Tag.objects.get(id=tag),
+            )
+            for tag in tags
+        ]
+
         RecipeIngredient.objects.bulk_create(
             create_ingredients
         )
+
+        RecipeTag.objects.bulk_create(
+            create_tags
+        )
+
         return recipe
 
     def update(self, instance, validated_data):
@@ -124,13 +162,22 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
 
     def to_representation(self, obj):
         """Возвращаем прдеставление в таком же виде, как и GET-запрос."""
+
         self.fields.pop('ingredients')
+        self.fields.pop('tags')
+
         representation = super().to_representation(obj)
+
         representation['ingredients'] = RecipeIngredientSerializer(
             RecipeIngredient.objects.filter(recipe=obj).all(), many=True
         ).data
+
+        representation['tags'] = RecipeTagSerializer(
+            RecipeTag.objects.filter(recipe=obj).all(), many=True
+        ).data
+
         return representation
 
     class Meta:
         model = Recipe
-        fields = ('name', 'ingredients', 'text')
+        fields = ('name', 'ingredients', 'text', 'tags')
