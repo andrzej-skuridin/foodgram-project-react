@@ -1,39 +1,49 @@
-from django.shortcuts import get_object_or_404
+from django.shortcuts import render, get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, serializers, status
-from rest_framework import mixins, viewsets
+from rest_framework import filters, mixins, viewsets, serializers, status
 from rest_framework.decorators import action
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
+from rest_framework.viewsets import ModelViewSet
 
-from api.permissions import (
-    RecipePermission,
-)
-from api.serializers import (
-    TagSerializer,
-    IngredientSerializer,
-    FavoriteSerializer,
-    RecipeListRetrieveSerializer,
-    RecipeCreatePatchSerializer,
-    SubscriptionSerializer,
-    UserGETSerializer,
-    UserInSubscriptionSerializer,
-)
-from recipes.models import (
-    Tag,
-    Ingredient,
-    Recipe, Favorite
-)
+from api.filters import RecipeFilter
+from api.permissions import IsOwnerOrReadOnly
+from api.serializers import RecipeListSerializer, RecipeCreateUpdateSerializer, IngredientSerializer, TagSerializer, \
+    UserInSubscriptionSerializer, FavoriteSerializer
+from recipes.models import Recipe, Tag, Ingredient, Favorite
 from users.models import Subscription, User
 
 
-class TagViewSet(mixins.ListModelMixin,
-                 mixins.RetrieveModelMixin,
-                 viewsets.GenericViewSet):
-    queryset = Tag.objects.all()
-    serializer_class = TagSerializer
-    pagination_class = None
-    permission_classes = (AllowAny,)
+class RecipeViewSet(ModelViewSet):
+    queryset = Recipe.objects.all()
+    http_method_names = ['get', 'post', 'patch', 'delete']
+    permission_classes = (IsAuthenticated, IsOwnerOrReadOnly)
+
+    filter_backends = (DjangoFilterBackend,)
+    filterset_fields = (
+        'tags',
+        'is_favorited'  # не работает!
+    )
+    filterset_class = RecipeFilter
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
+
+    def get_serializer_class(self):
+        if self.action in ('create', 'update', 'partial_update'):
+            return RecipeCreateUpdateSerializer
+
+        return RecipeListSerializer
+
+    def get_queryset(self):
+        qs = Recipe.objects.add_user_annotations(self.request.user.pk)
+
+        # Фильтры из GET-параметров запроса, например.
+        author = self.request.query_params.get('author', None)
+        if author:
+            qs = qs.filter(author=author)
+
+        return qs
 
 
 class IngredientViewSet(mixins.ListModelMixin,
@@ -48,80 +58,13 @@ class IngredientViewSet(mixins.ListModelMixin,
     search_fields = ('^name',)
 
 
-class RecipeViewSet(viewsets.ModelViewSet):
-    queryset = Recipe.objects.all()
-    permission_classes = [RecipePermission]
-
-    filter_backends = (DjangoFilterBackend,)  # нужно написать свой фильтр, этот не работает
-    search_fields = ('author_username',
-                     'is_favorited',
-                     'tags',
-                     # 'is_in_shopping_cart',
-                     )
-
-    def get_serializer_class(self):
-        if self.action in ('list', 'retrieve'):
-            return RecipeListRetrieveSerializer  # GET/list
-        if self.action in ('create', 'update'):
-            return RecipeCreatePatchSerializer  # сломано
-        return RecipeListRetrieveSerializer
-
-
-class FavoriteViewSet(viewsets.ModelViewSet):
-    http_method_names = ['post', 'delete']
-    serializer_class = FavoriteSerializer
-    permission_classes = IsAuthenticated,
-
-    def get_queryset(self):
-        recipe_id = self.kwargs.get('recipe_id')
-        new_queryset = Favorite.objects.filter(
-            recipe_key=recipe_id)
-        return new_queryset
-
-    @action(detail=False,
-            methods=('delete',),
-            permission_classes=IsAuthenticated,
-            url_path='')
-    def delete(self, request, *args, **kwargs):
-        # стандартный viewset разрешает метод delete только на something/id/
-        # поэтому если /something/something_else, придётся @action писать
-        recipe_id = self.kwargs.get('recipe_id')
-
-        # проверка, что такой Favorite существует в БД
-        queryset = Favorite.objects.filter(
-            follower=self.request.user,
-            recipe_key=recipe_id
-        )
-        if len(queryset) == 0:
-            raise serializers.ValidationError(
-                'Этот рецепт отсутствует в Избранном!'
-            )
-
-        Favorite.objects.filter(recipe_key=recipe_id).delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-    def perform_create(self, serializer):
-        recipe_id = self.kwargs.get('recipe_id')
-        recipe = get_object_or_404(Recipe, id=recipe_id)
-
-        # проверка, что такого Favorite уже нет в БД
-        queryset = Favorite.objects.filter(
-            follower=self.request.user,
-            recipe_key=recipe_id
-        )
-        if len(queryset) > 0:
-            raise serializers.ValidationError(
-                'Этот рецепт уже есть в Избранном!'
-            )
-
-        # запись нового объекта Favorite
-        serializer.save(follower=self.request.user,
-                        name=recipe.name,
-                        cooking_time=recipe.cooking_time,
-                        recipe_key=recipe
-                        )
-
-
+class TagViewSet(mixins.ListModelMixin,
+                 mixins.RetrieveModelMixin,
+                 viewsets.GenericViewSet):
+    queryset = Tag.objects.all()
+    serializer_class = TagSerializer
+    pagination_class = None
+    permission_classes = (AllowAny,)
 
 
 class SubscriptionViewSet(viewsets.ModelViewSet):
@@ -138,24 +81,19 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
         new_queryset = User.objects.filter(id__in=author_id_queryset)
         return new_queryset
 
-    # @action(
-    #     methods=('post',),
-    #     url_path=r'users/(?P<user_pk>\d+)',
-    #     detail=False,
-    # )
     def create(self, request, *args, **kwargs):  # perform_create
-        # конфликтует с созданием User через Djoser
         author_id = self.kwargs.get('user_id')
-        author = get_object_or_404(User, id=author_id)
         # проверка, что такого Subscription уже нет в БД
         queryset = Subscription.objects.filter(
             follower=self.request.user,
             author_id=author_id
         )
+
         if len(queryset) > 0:
             raise serializers.ValidationError(
                 'Вы уже подписаны на этого автора!'
             )
+
         # запись нового объекта Subscription
         Subscription.objects.create(
             follower=self.request.user,
@@ -190,3 +128,60 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
         Subscription.objects.filter(
             follower=self.request.user, author_id=author_id).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class FavoriteViewSet(viewsets.ModelViewSet):
+    http_method_names = ['post', 'delete']
+    serializer_class = FavoriteSerializer
+    permission_classes = IsAuthenticated,
+
+    def get_queryset(self):
+        recipe_id = self.kwargs.get('recipe_id')
+        new_queryset = Favorite.objects.filter(
+            recipe=recipe_id)
+        return new_queryset
+
+    @action(detail=False,
+            methods=('delete',),
+            permission_classes=IsAuthenticated,
+            url_path='')
+    def delete(self, request, *args, **kwargs):
+        # стандартный viewset разрешает метод delete только на something/id/
+        # поэтому если /something/something_else, придётся @action писать
+        recipe_id = self.kwargs.get('recipe_id')
+
+        # проверка, что такой Favorite существует в БД
+        queryset = Favorite.objects.filter(
+            follower=self.request.user,
+            recipe=recipe_id
+        )
+        if len(queryset) == 0:
+            raise serializers.ValidationError(
+                'Этот рецепт отсутствует в Избранном!'
+            )
+
+        Favorite.objects.filter(recipe=recipe_id).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def perform_create(self, serializer):
+        recipe_id = self.kwargs.get('recipe_id')
+        recipe = get_object_or_404(Recipe, id=recipe_id)
+
+        # проверка, что такого Favorite уже нет в БД
+        queryset = Favorite.objects.filter(
+            follower=self.request.user,
+            recipe=recipe_id
+        )
+        if len(queryset) > 0:
+            raise serializers.ValidationError(
+                'Этот рецепт уже есть в Избранном!'
+            )
+
+        # запись нового объекта Favorite
+        serializer.save(follower=self.request.user,
+                        #ame=recipe.name,
+                        #cooking_time=recipe.cooking_time,
+                        recipe=recipe
+                        )
+
+        return Response(status=status.HTTP_201_CREATED)
