@@ -188,3 +188,18 @@ class RecipeTag(models.Model):
         ordering = ('-id',)
 
 
+class ShoppingCart(models.Model):
+    client = models.ForeignKey(
+        to=User,
+        on_delete=models.CASCADE,
+        verbose_name='Покупатель'
+    )
+    recipe = models.ForeignKey(
+        to=Recipe,
+        on_delete=models.CASCADE,
+        verbose_name='Рецепт'
+    )
+
+    class Meta:
+        verbose_name = 'Покупка'
+        verbose_name_plural = 'Покупки'

@@ -320,9 +320,10 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 
 class FavoriteSerializer(serializers.ModelSerializer):
     id = serializers.SerializerMethodField()
-
     name = serializers.SerializerMethodField()
-    # image TBA
+    image = serializers.StringRelatedField(
+        source='recipe.image'
+    )
     cooking_time = serializers.SerializerMethodField()
 
     class Meta:
@@ -330,8 +331,8 @@ class FavoriteSerializer(serializers.ModelSerializer):
         fields = (
             'id',
             'name',
+            'image',
             'cooking_time',
-            # 'image' TBA
         )
 
     def get_id(self, data):
