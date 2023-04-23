@@ -55,7 +55,7 @@ class RecipeQuerySet(models.QuerySet):
         return self.annotate(
             is_favorited=Exists(
                 Favorite.objects.filter(
-                    user_id=user_id, recipe__pk=OuterRef('pk')
+                    follower=user_id, recipe=OuterRef('pk')
                 )
             ),
         )
@@ -72,16 +72,19 @@ class Recipe(models.Model):
         to=User,
         on_delete=models.CASCADE,
         related_name='recipes',
-        verbose_name='Автор')
+        verbose_name='Автор'
+    )
     name = models.CharField(
         max_length=200,
-        verbose_name='Название рецепта')
+        verbose_name='Название рецепта'
+    )
     text = models.TextField(verbose_name='Текст')
     ingredients = models.ManyToManyField(
         to=Ingredient,
         through='RecipeIngredient',
         through_fields=('recipe', 'ingredient'),
-        verbose_name='Ингредиенты')
+        verbose_name='Ингредиенты'
+    )
     pub_date = models.DateTimeField(
         verbose_name='Дата публикации',
         auto_now_add=True,
@@ -95,6 +98,11 @@ class Recipe(models.Model):
             validate_integer
         ],
         help_text='Required. 10 characters or fewer.',
+    )
+    image = models.ImageField(
+        upload_to='recipes/images/',
+        null=True,
+        default=None
     )
 
     objects = RecipeQuerySet.as_manager()
@@ -133,14 +141,14 @@ class RecipeIngredient(models.Model):
 
 class Favorite(models.Model):
     follower = models.ForeignKey(
-        User,
+        to=User,
         on_delete=models.CASCADE,
         related_name='favorites',
         verbose_name='Подписчик',
         null=True,  # null нужен, чтобы не ругался при создании на отправку пустой формы
     )
     recipe = models.ForeignKey(
-        Recipe,
+        to=Recipe,
         on_delete=models.CASCADE,
         related_name='favorites',
         verbose_name='Рецепт',

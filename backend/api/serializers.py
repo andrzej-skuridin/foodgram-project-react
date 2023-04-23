@@ -1,8 +1,30 @@
+from django.shortcuts import get_object_or_404
 from rest_framework import serializers
+from rest_framework.validators import UniqueTogetherValidator
 
 from recipes.models import Ingredient, RecipeIngredient, Recipe, RecipeTag, Tag, User, Favorite
 from users.models import Subscription
 
+import base64
+
+from django.core.files.base import ContentFile
+
+
+class Base64ImageField(serializers.ImageField):
+    """Поле картинки по теории Практикума"""
+    def to_internal_value(self, data):
+        # Если полученный объект строка, и эта строка
+        # начинается с 'data:image'...
+        if isinstance(data, str) and data.startswith('data:image'):
+            # ...начинаем декодировать изображение из base64.
+            # Сначала нужно разделить строку на части.
+            format, imgstr = data.split(';base64,')
+            # И извлечь расширение файла.
+            ext = format.split('/')[-1]
+            # Затем декодировать сами данные и поместить результат в файл,
+            # которому дать название по шаблону.
+            data = ContentFile(base64.b64decode(imgstr), name='temp.' + ext)
+        return super().to_internal_value(data)
 
 class UserListRetrieveSerializer(serializers.ModelSerializer):
     is_subscribed = serializers.SerializerMethodField()
@@ -75,6 +97,7 @@ class RecipeListSerializer(serializers.ModelSerializer):
     ingredients = serializers.SerializerMethodField()
     is_favorited = serializers.BooleanField()
     author = UserListRetrieveSerializer()
+    image = Base64ImageField(required=False, allow_null=True)
 
     def get_ingredients(self, obj):
         """Возвращает отдельный сериализатор."""
@@ -90,7 +113,18 @@ class RecipeListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Recipe
-        fields = ('name', 'ingredients', 'is_favorited', 'text', 'tags', 'cooking_time', 'id', 'author')
+        fields = (
+            'id',
+            'tags',
+            'author',
+            'ingredients',
+            'is_favorited',
+            # 'is_in_shopping_cart'
+            'name',
+            'image',
+            'text',
+            'cooking_time',
+        )
 
 
 class IngredientCreateInRecipeSerializer(serializers.ModelSerializer):
@@ -127,6 +161,14 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
 
     ingredients = IngredientCreateInRecipeSerializer(many=True)
     tags = serializers.ListField(min_length=1)
+    image = Base64ImageField(required=False, allow_null=True)
+    is_favorited = serializers.SerializerMethodField()
+
+    def get_is_favorited(self, obj):
+        if Favorite.objects.filter(recipe_id=obj.id).exists():
+            return self.context.get('request').user.id == get_object_or_404(
+                Favorite, recipe_id=obj.id).follower.id
+        return False
 
     def validate_ingredients(self, value):
         if len(value) < 1:
@@ -203,7 +245,17 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Recipe
-        fields = ('name', 'ingredients', 'text', 'tags', 'cooking_time')
+        fields = (
+            'id',
+            'tags',
+            'ingredients',
+            'is_favorited',
+            # "is_in_shopping_cart"
+            'name',
+            'image',
+            'text',
+            'cooking_time',
+        )
 
 
 class IngredientSerializer(serializers.ModelSerializer):
@@ -250,6 +302,20 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Subscription
         fields = '__all__'
+        validators = [
+            UniqueTogetherValidator(
+                queryset=Subscription.objects.all(),
+                fields=('follower', 'author')
+            )
+        ]
+
+    # не работает! подписка на себя создаётся
+    def validate(self, data):
+        if self.context['request'].user == data['author']:
+            raise serializers.ValidationError(
+                'Нельзя подписаться на себя!'
+            )
+        return data
 
 
 class FavoriteSerializer(serializers.ModelSerializer):
