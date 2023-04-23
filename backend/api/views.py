@@ -5,12 +5,13 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
+from django.http import FileResponse
 
 from api.filters import RecipeFilter
 from api.permissions import IsOwnerOrReadOnly
 from api.serializers import RecipeListSerializer, RecipeCreateUpdateSerializer, IngredientSerializer, TagSerializer, \
-    UserInSubscriptionSerializer, FavoriteSerializer
-from recipes.models import Recipe, Tag, Ingredient, Favorite
+    UserInSubscriptionSerializer, FavoriteSerializer, ShoppingCartSerializer
+from recipes.models import Recipe, Tag, Ingredient, Favorite, ShoppingCart
 from users.models import Subscription, User
 
 
@@ -105,7 +106,8 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
             methods=('delete',),
             permission_classes=IsAuthenticated,
             # url /subscribe/ обрабатывается в urls.py, видимо поэтому
-            # работает при таком пути
+            # работает при таком пути, возможно и стереть можно,
+            # но раз заботает, не чиню
             url_path=r'users/(?P<user_pk>\d+)/',
             )
     def delete(self, request, *args, **kwargs):
@@ -147,7 +149,7 @@ class FavoriteViewSet(viewsets.ModelViewSet):
             url_path='')
     def delete(self, request, *args, **kwargs):
         # стандартный viewset разрешает метод delete только на something/id/
-        # поэтому если /something/something_else, придётся @action писать
+        # поэтому если /something/something_else/, придётся @action писать
         recipe_id = self.kwargs.get('recipe_id')
 
         # проверка, что такой Favorite существует в БД
@@ -178,10 +180,83 @@ class FavoriteViewSet(viewsets.ModelViewSet):
             )
 
         # запись нового объекта Favorite
-        serializer.save(follower=self.request.user,
-                        #ame=recipe.name,
-                        #cooking_time=recipe.cooking_time,
-                        recipe=recipe
-                        )
+        serializer.save(
+            follower=self.request.user,
+            recipe=recipe
+        )
 
         return Response(status=status.HTTP_201_CREATED)
+
+
+class ShoppingCartViewSet(mixins.CreateModelMixin,
+                          mixins.DestroyModelMixin,
+                          viewsets.GenericViewSet):
+    http_method_names = ['get', 'post', 'delete']
+    permission_classes = IsAuthenticated,
+    serializer_class = ShoppingCartSerializer
+
+    def get_queryset(self):
+        new_queryset = ShoppingCart.objects.filter(
+            client=self.request.user)
+        return new_queryset
+
+    @action(detail=False,
+            methods=('delete',),
+            permission_classes=IsAuthenticated,
+            url_path='')
+    def delete(self, request, *args, **kwargs):
+        # стандартный viewset разрешает метод delete только на something/id/
+        # поэтому если /something/something_else/, придётся @action писать
+        recipe_id = self.kwargs.get('recipe_id')
+
+        # проверка, что такой ShoppingCart существует в БД
+        queryset = ShoppingCart.objects.filter(
+            client=self.request.user,
+            recipe=recipe_id
+        )
+        if len(queryset) == 0:
+            raise serializers.ValidationError(
+                'Этот рецепт отсутствует в списке покупок!'
+            )
+
+        ShoppingCart.objects.filter(
+            client=self.request.user,
+            recipe=recipe_id
+        ).delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def perform_create(self, serializer):
+        recipe_id = self.kwargs.get('recipe_id')
+        recipe = get_object_or_404(Recipe, id=recipe_id)
+
+        # проверка, что такого ShoppingCart уже нет в БД
+        queryset = ShoppingCart.objects.filter(
+            client=self.request.user,
+            recipe=recipe_id
+        )
+        if len(queryset) > 0:
+            raise serializers.ValidationError(
+                'Этот рецепт уже есть в списке покупок!'
+            )
+
+        # запись нового объекта ShoppingCart
+        serializer.save(
+            client=self.request.user,
+            recipe=recipe,
+        )
+
+        return Response(status=status.HTTP_201_CREATED)
+
+    @action(detail=False,
+            methods=('get',),
+            permission_classes=IsAuthenticated,
+            url_path=''  # возможно тут надо будет оказать путь
+            )
+    def download_shopping_cart(self):
+        pass
+        # img = open('images/bojnice.jpg', 'rb')
+        #
+        # response = FileResponse(img)
+        #
+        # return response

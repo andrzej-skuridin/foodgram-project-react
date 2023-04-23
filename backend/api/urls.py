@@ -3,7 +3,8 @@ from django.db import router
 from django.urls import include, path
 from rest_framework import routers
 
-from api.views import RecipeViewSet, TagViewSet, IngredientViewSet, SubscriptionViewSet, FavoriteViewSet
+from api.views import RecipeViewSet, TagViewSet, IngredientViewSet, SubscriptionViewSet, FavoriteViewSet, \
+    ShoppingCartViewSet
 
 router = routers.DefaultRouter()
 
@@ -36,6 +37,16 @@ router.register(
     prefix=r'users/subscriptions',
     viewset=SubscriptionViewSet,
     basename='subscriptions'
+)
+router.register(
+    prefix=r'recipes/(?P<recipe_id>\d+)/shopping_cart',
+    viewset=ShoppingCartViewSet,
+    basename='shopping_cart'
+)
+router.register(
+    prefix=r'recipes/(?P<recipe_id>\d+)/download_shopping_cart',
+    viewset=ShoppingCartViewSet,
+    basename='download_shopping_cart'
 )
 
 urlpatterns = [

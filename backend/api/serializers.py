@@ -2,7 +2,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 
-from recipes.models import Ingredient, RecipeIngredient, Recipe, RecipeTag, Tag, User, Favorite
+from recipes.models import Ingredient, RecipeIngredient, Recipe, RecipeTag, Tag, User, Favorite, ShoppingCart
 from users.models import Subscription
 
 import base64
@@ -348,3 +348,15 @@ class FavoriteSerializer(serializers.ModelSerializer):
         recipe_id = int(self.context.get('request').parser_context.get('kwargs').get(
             'recipe_id'))
         return Recipe.objects.get(id=recipe_id).cooking_time
+
+
+class ShoppingCartSerializer(FavoriteSerializer):
+
+    class Meta:
+        model = ShoppingCart
+        fields = (
+            'id',
+            'name',
+            'image',
+            'cooking_time',
+        )
