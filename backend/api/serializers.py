@@ -95,6 +95,7 @@ class RecipeListSerializer(serializers.ModelSerializer):
 
     tags = serializers.SerializerMethodField()
     ingredients = serializers.SerializerMethodField()
+    is_in_shopping_cart = serializers.SerializerMethodField()
     is_favorited = serializers.BooleanField()
     author = UserListRetrieveSerializer()
     image = Base64ImageField(required=False, allow_null=True)
@@ -111,6 +112,13 @@ class RecipeListSerializer(serializers.ModelSerializer):
             RecipeTag.objects.filter(recipe_id=obj).all(), many=True
         ).data
 
+    def get_is_in_shopping_cart(self, obj):
+        if ShoppingCart.objects.filter(
+                recipe=obj.id, client=self.context.get('request').user.id).exists():
+            return self.context.get('request').user.id == get_object_or_404(
+                ShoppingCart, recipe_id=obj.id).client.id
+        return False
+
     class Meta:
         model = Recipe
         fields = (
@@ -119,7 +127,7 @@ class RecipeListSerializer(serializers.ModelSerializer):
             'author',
             'ingredients',
             'is_favorited',
-            # 'is_in_shopping_cart'
+            'is_in_shopping_cart',
             'name',
             'image',
             'text',
@@ -163,11 +171,19 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
     tags = serializers.ListField(min_length=1)
     image = Base64ImageField(required=False, allow_null=True)
     is_favorited = serializers.SerializerMethodField()
+    is_in_shopping_cart = serializers.SerializerMethodField()
 
     def get_is_favorited(self, obj):
         if Favorite.objects.filter(recipe_id=obj.id).exists():
             return self.context.get('request').user.id == get_object_or_404(
                 Favorite, recipe_id=obj.id).follower.id
+        return False
+
+    def get_is_in_shopping_cart(self, obj):
+        if ShoppingCart.objects.filter(
+                recipe=obj.id, client=self.context.get('request').user.id).exists():
+            return self.context.get('request').user.id == get_object_or_404(
+                ShoppingCart, recipe_id=obj.id).client.id
         return False
 
     def validate_ingredients(self, value):
@@ -250,7 +266,7 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
             'tags',
             'ingredients',
             'is_favorited',
-            # "is_in_shopping_cart"
+            'is_in_shopping_cart',
             'name',
             'image',
             'text',

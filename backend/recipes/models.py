@@ -192,12 +192,14 @@ class ShoppingCart(models.Model):
     client = models.ForeignKey(
         to=User,
         on_delete=models.CASCADE,
-        verbose_name='Покупатель'
+        verbose_name='Покупатель',
+        related_name='shopping_list',
     )
     recipe = models.ForeignKey(
         to=Recipe,
         on_delete=models.CASCADE,
-        verbose_name='Рецепт'
+        verbose_name='Рецепт',
+        related_name='in_shopping_list',
     )
 
     class Meta:
