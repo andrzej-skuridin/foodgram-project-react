@@ -1,11 +1,12 @@
 from typing import Optional
 
-from django.contrib.auth import get_user_model
-from django.core.validators import MaxLengthValidator, validate_slug
+from django.core.validators import MaxLengthValidator, validate_slug, validate_integer
 from django.db import models
 from django.db.models import Exists, OuterRef
 
-User = get_user_model()
+from recipes.validators import validate_cooking_time
+from users.models import User
+
 
 class Tag(models.Model):
     color = models.CharField(
@@ -52,7 +53,7 @@ class RecipeQuerySet(models.QuerySet):
 
     def add_user_annotations(self, user_id: Optional[int]):
         return self.annotate(
-            is_favorite=Exists(
+            is_favorited=Exists(
                 Favorite.objects.filter(
                     user_id=user_id, recipe__pk=OuterRef('pk')
                 )
@@ -86,11 +87,20 @@ class Recipe(models.Model):
         auto_now_add=True,
         db_index=True
     )
+    cooking_time = models.IntegerField(
+        verbose_name='Время приготовления',
+        max_length=10,
+        validators=[
+            validate_cooking_time,
+            validate_integer
+        ],
+        help_text='Required. 10 characters or fewer.',
+    )
 
     objects = RecipeQuerySet.as_manager()
 
     class Meta:
-        ordering = ('-pub_date', )
+        ordering = ('-pub_date',)
         verbose_name = 'Рецепт'
         verbose_name_plural = 'Рецепты'
 
@@ -122,27 +132,29 @@ class RecipeIngredient(models.Model):
 
 
 class Favorite(models.Model):
-    user = models.ForeignKey(
+    follower = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
         related_name='favorites',
-        verbose_name='Пользователь'
+        verbose_name='Подписчик',
+        null=True,  # null нужен, чтобы не ругался при создании на отправку пустой формы
     )
     recipe = models.ForeignKey(
         Recipe,
         on_delete=models.CASCADE,
         related_name='favorites',
-        verbose_name='Рецепт'
+        verbose_name='Рецепт',
+        null=True,  # null нужен, чтобы не ругался при создании на отправку пустой формы
     )
 
     def __str__(self):
-        return f'Избранный {self.recipe} у {self.user}'
+        return f'Избранный {self.recipe} у {self.follower}'
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=('user', 'recipe'),
-                name='unique_favorite_user_recipe'
+                fields=('follower', 'recipe'),
+                name='unique_favorite_follower_recipe'
             )
         ]
         verbose_name = 'Объект избранного'
@@ -166,3 +178,5 @@ class RecipeTag(models.Model):
         verbose_name = 'Тег/Рецепт'
         verbose_name_plural = 'Теги/Рецепты'
         ordering = ('-id',)
+
+

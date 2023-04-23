@@ -1,6 +1,28 @@
 from rest_framework import serializers
 
-from recipes.models import Ingredient, RecipeIngredient, Recipe, RecipeTag, Tag
+from recipes.models import Ingredient, RecipeIngredient, Recipe, RecipeTag, Tag, User, Favorite
+from users.models import Subscription
+
+
+class UserListRetrieveSerializer(serializers.ModelSerializer):
+    is_subscribed = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = (
+            'email',
+            'id',
+            'username',
+            'first_name',
+            'last_name',
+            'is_subscribed',
+        )
+
+    def get_is_subscribed(self, data):
+        current_user = self.context.get('request').user.id
+        author = data.id
+        return Subscription.objects.filter(
+            follower_id=current_user, author_id=author).exists()
 
 
 class RecipeIngredientSerializer(serializers.ModelSerializer):
@@ -51,7 +73,8 @@ class RecipeListSerializer(serializers.ModelSerializer):
 
     tags = serializers.SerializerMethodField()
     ingredients = serializers.SerializerMethodField()
-    is_favorite = serializers.BooleanField()
+    is_favorited = serializers.BooleanField()
+    author = UserListRetrieveSerializer()
 
     def get_ingredients(self, obj):
         """Возвращает отдельный сериализатор."""
@@ -67,7 +90,7 @@ class RecipeListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Recipe
-        fields = ('name', 'ingredients', 'is_favorite', 'text', 'tags')
+        fields = ('name', 'ingredients', 'is_favorited', 'text', 'tags', 'cooking_time', 'id', 'author')
 
 
 class IngredientCreateInRecipeSerializer(serializers.ModelSerializer):
@@ -180,4 +203,81 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Recipe
-        fields = ('name', 'ingredients', 'text', 'tags')
+        fields = ('name', 'ingredients', 'text', 'tags', 'cooking_time')
+
+
+class IngredientSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Ingredient
+        fields = '__all__'
+
+
+class TagSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tag
+        fields = '__all__'
+
+
+class UserInSubscriptionSerializer(UserListRetrieveSerializer):
+    recipes = serializers.SerializerMethodField()
+    recipes_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = (
+            'email',
+            'id',
+            'username',
+            'first_name',
+            'last_name',
+            'is_subscribed',
+            'recipes',
+            'recipes_count',
+        )
+
+    def get_recipes(self, data):
+        author_id = data.id
+        recipes_queryset = Recipe.objects.filter(author_id=author_id)
+        return recipes_queryset.values()
+
+    def get_recipes_count(self, data):
+        return len(Recipe.objects.filter(author_id=data.id))
+
+
+class SubscriptionSerializer(serializers.ModelSerializer):
+    author = UserInSubscriptionSerializer(many=False, required=True)
+
+    class Meta:
+        model = Subscription
+        fields = '__all__'
+
+
+class FavoriteSerializer(serializers.ModelSerializer):
+    id = serializers.SerializerMethodField()
+
+    name = serializers.SerializerMethodField()
+    # image TBA
+    cooking_time = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Favorite
+        fields = (
+            'id',
+            'name',
+            'cooking_time',
+            # 'image' TBA
+        )
+
+    def get_id(self, data):
+        return int(self.context.get('request').parser_context.get('kwargs').get(
+            'recipe_id'))
+
+    def get_name(self, data):
+        recipe_id = int(self.context.get('request').parser_context.get('kwargs').get(
+            'recipe_id'))
+        return Recipe.objects.get(id=recipe_id).name
+
+    def get_cooking_time(self, data):
+        recipe_id = int(self.context.get('request').parser_context.get('kwargs').get(
+            'recipe_id'))
+        return Recipe.objects.get(id=recipe_id).cooking_time

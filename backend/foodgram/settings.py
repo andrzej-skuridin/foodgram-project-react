@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'djoser',
+    'django_filters',
 
     'api.apps.ApiConfig',
     'recipes.apps.RecipesConfig',
@@ -160,11 +161,10 @@ DJOSER = {
         'token_destroy': ['rest_framework.permissions.IsAuthenticated'],
     },
 
-    # 'SERIALIZERS': {
-    #     #'user': 'api.serializers.UserGETSerializer',
-    #     # 'current_user': 'api.serializers.UserGETSerializer,
-    #     # /users/me   /users/id/  ошибка у анонима
-    #     #'current_user': 'api.serializers.UserGETmeSerializer',
-    # },
+    'SERIALIZERS': {
+        'user': 'api.serializers.UserListRetrieveSerializer',
+        #/users/me   /users/id/  ошибка у анонима
+        'current_user': 'api.serializers.UserListRetrieveSerializer',
+    },
 
 }

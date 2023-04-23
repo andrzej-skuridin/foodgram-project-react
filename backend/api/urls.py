@@ -3,10 +3,40 @@ from django.db import router
 from django.urls import include, path
 from rest_framework import routers
 
-from api.views import RecipesViewSet
+from api.views import RecipeViewSet, TagViewSet, IngredientViewSet, SubscriptionViewSet, FavoriteViewSet
 
 router = routers.DefaultRouter()
-router.register(r'recipes', RecipesViewSet)
+
+router.register(
+    prefix='tags',
+    basename='tags',
+    viewset=TagViewSet
+)
+router.register(
+    prefix='ingredients',
+    basename='ingredients',
+    viewset=IngredientViewSet
+)
+router.register(
+    prefix='recipes',
+    basename='recipes',
+    viewset=RecipeViewSet
+)
+router.register(
+    prefix=r'recipes/(?P<recipe_id>\d+)/favorite',
+    viewset=FavoriteViewSet,
+    basename='favorite'
+)
+router.register(
+    prefix=r'users/(?P<user_id>\d+)/subscribe',
+    viewset=SubscriptionViewSet,
+    basename='subscribe'
+)
+router.register(
+    prefix=r'users/subscriptions',
+    viewset=SubscriptionViewSet,
+    basename='subscriptions'
+)
 
 urlpatterns = [
     path('', include(router.urls)),
