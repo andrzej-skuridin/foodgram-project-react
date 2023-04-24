@@ -43,11 +43,6 @@ router.register(
     viewset=ShoppingCartViewSet,
     basename='shopping_cart'
 )
-router.register(
-    prefix=r'recipes/(?P<recipe_id>\d+)/download_shopping_cart',
-    viewset=ShoppingCartViewSet,
-    basename='download_shopping_cart'
-)
 
 urlpatterns = [
     path('', include(router.urls)),

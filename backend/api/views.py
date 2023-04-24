@@ -1,3 +1,5 @@
+import csv
+
 from django.shortcuts import render, get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, mixins, viewsets, serializers, status
@@ -5,13 +7,16 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
-from django.http import FileResponse
+import io
+from django.http import FileResponse, HttpResponse
+from reportlab.pdfgen import canvas
+from django.template import loader
 
 from api.filters import RecipeFilter
 from api.permissions import IsOwnerOrReadOnly
 from api.serializers import RecipeListSerializer, RecipeCreateUpdateSerializer, IngredientSerializer, TagSerializer, \
     UserInSubscriptionSerializer, FavoriteSerializer, ShoppingCartSerializer
-from recipes.models import Recipe, Tag, Ingredient, Favorite, ShoppingCart
+from recipes.models import Recipe, Tag, Ingredient, Favorite, ShoppingCart, RecipeIngredient
 from users.models import Subscription, User
 
 
@@ -37,14 +42,57 @@ class RecipeViewSet(ModelViewSet):
         return RecipeListSerializer
 
     def get_queryset(self):
-        qs = Recipe.objects.add_user_annotations(self.request.user.pk)
+        new_queryset = Recipe.objects.add_user_annotations(self.request.user.pk)
 
         # Фильтры из GET-параметров запроса, например.
         author = self.request.query_params.get('author', None)
         if author:
-            qs = qs.filter(author=author)
+            new_queryset = new_queryset.filter(author=author)
 
-        return qs
+        return new_queryset
+
+    @action(detail=False,
+            methods=('get',),
+            permission_classes=(IsAuthenticated,),
+            serializer_class=None,
+            url_path=''  # возможно тут надо будет оказать путь
+            )
+    def download_shopping_cart(self, request):
+        client = self.request.user
+        shopping_cart_objects = ShoppingCart.objects.filter(client=client).all()
+        shopping_list = dict()
+
+        if len(shopping_cart_objects) < 1:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        ingredients = RecipeIngredient.objects.filter(
+            recipe__in_shopping_list__client_id=client
+        ).values_list(
+            'ingredient__name',
+            'ingredient__measurement_unit',
+            'amount'
+        )
+
+        for item in ingredients:
+            name = item[0]
+            if name not in shopping_list.items():
+                shopping_list[item] = {
+                    'measurement_unit': item[1],
+                    'amount': item[2]
+                }
+            else:
+                shopping_list[name]['amount'] += item[2]
+
+        response = HttpResponse(
+            content_type='text/csv',
+            headers={'Content-Disposition': 'attachment; filename="shopping_list.csv"'},
+        )
+
+        writer = csv.writer(response)
+        for item in shopping_list:
+            writer.writerow(item)
+
+        return response
 
 
 class IngredientViewSet(mixins.ListModelMixin,
@@ -188,11 +236,14 @@ class FavoriteViewSet(viewsets.ModelViewSet):
         return Response(status=status.HTTP_201_CREATED)
 
 
-class ShoppingCartViewSet(mixins.CreateModelMixin,
-                          mixins.DestroyModelMixin,
-                          viewsets.GenericViewSet):
-    http_method_names = ['get', 'post', 'delete']
+class ShoppingCartViewSet(
+    mixins.CreateModelMixin,
+    mixins.DestroyModelMixin,
+    viewsets.GenericViewSet
+):
+    http_method_names = ['post', 'delete']
     permission_classes = IsAuthenticated,
+    pagination_class = None
     serializer_class = ShoppingCartSerializer
 
     def get_queryset(self):
@@ -203,6 +254,7 @@ class ShoppingCartViewSet(mixins.CreateModelMixin,
     @action(detail=False,
             methods=('delete',),
             permission_classes=IsAuthenticated,
+            serializer_class=ShoppingCartSerializer,
             url_path='')
     def delete(self, request, *args, **kwargs):
         # стандартный viewset разрешает метод delete только на something/id/
@@ -247,16 +299,3 @@ class ShoppingCartViewSet(mixins.CreateModelMixin,
         )
 
         return Response(status=status.HTTP_201_CREATED)
-
-    @action(detail=False,
-            methods=('get',),
-            permission_classes=IsAuthenticated,
-            url_path=''  # возможно тут надо будет оказать путь
-            )
-    def download_shopping_cart(self):
-        pass
-        # img = open('images/bojnice.jpg', 'rb')
-        #
-        # response = FileResponse(img)
-        #
-        # return response
