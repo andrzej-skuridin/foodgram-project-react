@@ -159,7 +159,8 @@ DJOSER = {
     'PERMISSIONS': {
         'user_list': ['rest_framework.permissions.AllowAny'],  # отвечает за список юзеров
         'user_create': ['rest_framework.permissions.AllowAny'],
-        'user': ['djoser.permissions.CurrentUserOrAdminOrReadOnly'],  # отвечает за RETRIEVE single user, users/me
+        # 'user': ['djoser.permissions.CurrentUserOrAdminOrReadOnly'],  # отвечает за RETRIEVE single user, users/me
+        'user': ['api.permissions.IsOwnerOrReadOnly'],
         'token_create': ['rest_framework.permissions.AllowAny'],
         'token_destroy': ['rest_framework.permissions.IsAuthenticated'],
     },

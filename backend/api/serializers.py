@@ -63,7 +63,7 @@ class RecipeIngredientSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = RecipeIngredient
-        fields = ('amount', 'name', 'measurement_unit', 'id')
+        fields = ('id', 'name', 'measurement_unit', 'amount')
 
 
 class RecipeTagSerializer(serializers.ModelSerializer):
@@ -147,7 +147,7 @@ class IngredientCreateInRecipeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = RecipeIngredient
-        fields = ('recipe', 'id', 'amount')
+        fields = ('id', 'recipe', 'amount')
 
 
 class TagCreateInRecipeSerializer(serializers.ModelSerializer):
@@ -324,14 +324,6 @@ class SubscriptionSerializer(serializers.ModelSerializer):
                 fields=('follower', 'author')
             )
         ]
-
-    # не работает! подписка на себя создаётся
-    def validate(self, data):
-        if self.context['request'].user == data['author']:
-            raise serializers.ValidationError(
-                'Нельзя подписаться на себя!'
-            )
-        return data
 
 
 class FavoriteSerializer(serializers.ModelSerializer):

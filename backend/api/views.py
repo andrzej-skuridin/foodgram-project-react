@@ -23,7 +23,7 @@ from users.models import Subscription, User
 class RecipeViewSet(ModelViewSet):
     queryset = Recipe.objects.all()
     http_method_names = ['get', 'post', 'patch', 'delete']
-    permission_classes = (IsAuthenticated, IsOwnerOrReadOnly)
+    permission_classes = (IsOwnerOrReadOnly,)
 
     filter_backends = (DjangoFilterBackend,)
     filterset_fields = (
@@ -131,6 +131,7 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
         return new_queryset
 
     def create(self, request, *args, **kwargs):  # perform_create
+    # def perform_create(self, serializer):
         author_id = self.kwargs.get('user_id')
         # проверка, что такого Subscription уже нет в БД
         queryset = Subscription.objects.filter(
@@ -143,11 +144,30 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
                 'Вы уже подписаны на этого автора!'
             )
 
+        if User.objects.get(id=author_id) == self.request.user:
+            raise serializers.ValidationError(
+                'Нельзя подписываться на себя!'
+            )
+
         # запись нового объекта Subscription
         Subscription.objects.create(
             follower=self.request.user,
             author_id=author_id
         )
+
+        # author_obj = User.objects.get(id=author_id)
+        # print(author_obj)
+        #
+        # # запись нового объекта Subscription (new!)
+        # serializer.save(
+        #     follower=self.request.user,
+        #     author_id=author_id,
+        #     email=author_obj.email,
+        #     username=author_obj.username,
+        #     first_name=author_obj.first_name,
+        #     last_name=author_obj.last_name,
+        # )
+
         return Response(status=status.HTTP_201_CREATED)
 
     @action(detail=False,
@@ -155,7 +175,7 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
             permission_classes=IsAuthenticated,
             # url /subscribe/ обрабатывается в urls.py, видимо поэтому
             # работает при таком пути, возможно и стереть можно,
-            # но раз заботает, не чиню
+            # но раз работает, не чиню
             url_path=r'users/(?P<user_pk>\d+)/',
             )
     def delete(self, request, *args, **kwargs):
