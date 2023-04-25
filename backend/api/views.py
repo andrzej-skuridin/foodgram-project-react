@@ -1,4 +1,5 @@
 import csv
+from collections import defaultdict
 
 from django.shortcuts import render, get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
@@ -74,7 +75,7 @@ class RecipeViewSet(ModelViewSet):
     def download_shopping_cart(self, request):
         client = self.request.user
         shopping_cart_objects = ShoppingCart.objects.filter(client=client).all()
-        shopping_list = dict()
+        shopping_list = defaultdict()
 
         if len(shopping_cart_objects) < 1:
             return Response(status=status.HTTP_400_BAD_REQUEST)
@@ -87,15 +88,29 @@ class RecipeViewSet(ModelViewSet):
             'amount'
         )
 
-        for item in ingredients:
-            name = item[0]
-            if name not in shopping_list.items():
-                shopping_list[item] = {
-                    'measurement_unit': item[1],
-                    'amount': item[2]
+        # for item in ingredients:
+        #     name = item[0]
+        #     if name not in shopping_list.keys():
+        #         shopping_list[item] = {
+        #             'measurement_unit': item[1],
+        #             'amount': item[2]
+        #         }
+        #     else:
+        #         shopping_list[name]['amount'] += item[2]
+        print('ingredients')
+        print(ingredients)
+        for name, unit, amount in ingredients:
+            print('name, unit, amount')
+            print(name, unit, amount)
+            print('shopping_list.keys()')
+            print(shopping_list.keys())
+            if name not in shopping_list.keys():
+                shopping_list[name] = {
+                    'measurement_unit': unit,
+                    'amount': amount
                 }
             else:
-                shopping_list[name]['amount'] += item[2]
+                shopping_list[name]['amount'] += amount
 
         response = HttpResponse(
             content_type='text/csv',
@@ -103,8 +118,13 @@ class RecipeViewSet(ModelViewSet):
         )
 
         writer = csv.writer(response)
-        for item in shopping_list:
-            writer.writerow(item)
+
+        array_of_rows = list()
+
+        for name, vals in shopping_list.items():
+            array_of_rows.append((name, vals['measurement_unit'], vals['amount']))
+        for row in array_of_rows:
+            writer.writerow(row)
 
         return response
 
