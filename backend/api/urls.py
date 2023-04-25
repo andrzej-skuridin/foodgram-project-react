@@ -4,7 +4,7 @@ from django.urls import include, path
 from rest_framework import routers
 
 from api.views import RecipeViewSet, TagViewSet, IngredientViewSet, SubscriptionViewSet, FavoriteViewSet, \
-    ShoppingCartViewSet
+    ShoppingCartViewSet, MeViewSet
 
 router = routers.DefaultRouter()
 
@@ -42,6 +42,11 @@ router.register(
     prefix=r'recipes/(?P<recipe_id>\d+)/shopping_cart',
     viewset=ShoppingCartViewSet,
     basename='shopping_cart'
+)
+router.register(
+    prefix=r'users/me',
+    viewset=MeViewSet,
+    basename='me'
 )
 
 urlpatterns = [

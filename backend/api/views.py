@@ -15,9 +15,21 @@ from django.template import loader
 from api.filters import RecipeFilter
 from api.permissions import IsOwnerOrReadOnly
 from api.serializers import RecipeListSerializer, RecipeCreateUpdateSerializer, IngredientSerializer, TagSerializer, \
-    UserInSubscriptionSerializer, FavoriteSerializer, ShoppingCartSerializer
+    UserInSubscriptionSerializer, FavoriteSerializer, ShoppingCartSerializer, UserListRetrieveSerializer
 from recipes.models import Recipe, Tag, Ingredient, Favorite, ShoppingCart, RecipeIngredient
 from users.models import Subscription, User
+
+
+class MeViewSet(mixins.ListModelMixin,
+                viewsets.GenericViewSet):
+    """Костыль против ошибки при обращении анонима к эндпоинту /me"""
+    permission_classes = (IsAuthenticated,)
+    serializer_class = UserListRetrieveSerializer
+    pagination_class = None
+
+    def get_queryset(self):
+        new_queryset = User.objects.filter(id=self.request.user.pk)
+        return new_queryset
 
 
 class RecipeViewSet(ModelViewSet):
@@ -33,7 +45,6 @@ class RecipeViewSet(ModelViewSet):
         'author',  # можно явно не прописывать, по id работает из коробки
         'is_favorited',
     )
-
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
@@ -134,7 +145,7 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
         return new_queryset
 
     def create(self, request, *args, **kwargs):  # perform_create
-    # def perform_create(self, serializer):
+        # def perform_create(self, serializer):
         author_id = self.kwargs.get('user_id')
         # проверка, что такого Subscription уже нет в БД
         queryset = Subscription.objects.filter(
