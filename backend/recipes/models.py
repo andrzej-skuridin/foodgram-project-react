@@ -58,6 +58,11 @@ class RecipeQuerySet(models.QuerySet):
                     follower=user_id, recipe=OuterRef('pk')
                 )
             ),
+            is_in_shopping_cart=Exists(
+                ShoppingCart.objects.filter(
+                    client=user_id, recipe=OuterRef('pk')
+                )
+            ),
         )
 
 

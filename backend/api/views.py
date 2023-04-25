@@ -26,11 +26,14 @@ class RecipeViewSet(ModelViewSet):
     permission_classes = (IsOwnerOrReadOnly,)
 
     filter_backends = (DjangoFilterBackend,)
+    filterset_class = RecipeFilter
     filterset_fields = (
         'tags',
-        'is_favorited'  # не работает!
+        'is_in_shopping_cart',
+        'author',  # можно явно не прописывать, по id работает из коробки
+        'is_favorited',
     )
-    filterset_class = RecipeFilter
+
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
