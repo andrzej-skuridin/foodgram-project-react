@@ -16,7 +16,8 @@ from django.template import loader
 from api.filters import RecipeFilter
 from api.permissions import IsOwnerOrReadOnly
 from api.serializers import RecipeListSerializer, RecipeCreateUpdateSerializer, IngredientSerializer, TagSerializer, \
-    UserInSubscriptionSerializer, FavoriteSerializer, ShoppingCartSerializer, UserListRetrieveSerializer
+    UserInSubscriptionSerializer, FavoriteSerializer, ShoppingCartSerializer, UserListRetrieveSerializer, \
+    SubscriptionSerializer
 from recipes.models import Recipe, Tag, Ingredient, Favorite, ShoppingCart, RecipeIngredient
 from users.models import Subscription, User
 
@@ -43,7 +44,7 @@ class RecipeViewSet(ModelViewSet):
     filterset_fields = (
         'tags',
         'is_in_shopping_cart',
-        'author',  # можно явно не прописывать, по id работает из коробки
+        'author',  # по id работает из коробки, но пусть будет явно
         'is_favorited',
     )
 
@@ -88,22 +89,7 @@ class RecipeViewSet(ModelViewSet):
             'amount'
         )
 
-        # for item in ingredients:
-        #     name = item[0]
-        #     if name not in shopping_list.keys():
-        #         shopping_list[item] = {
-        #             'measurement_unit': item[1],
-        #             'amount': item[2]
-        #         }
-        #     else:
-        #         shopping_list[name]['amount'] += item[2]
-        print('ingredients')
-        print(ingredients)
         for name, unit, amount in ingredients:
-            print('name, unit, amount')
-            print(name, unit, amount)
-            print('shopping_list.keys()')
-            print(shopping_list.keys())
             if name not in shopping_list.keys():
                 shopping_list[name] = {
                     'measurement_unit': unit,
@@ -153,7 +139,13 @@ class TagViewSet(mixins.ListModelMixin,
 class SubscriptionViewSet(viewsets.ModelViewSet):
     http_method_names = ['get', 'post', 'delete']
     permission_classes = IsAuthenticated,
-    serializer_class = UserInSubscriptionSerializer
+    # serializer_class = UserInSubscriptionSerializer
+
+    def get_serializer_class(self):
+        if self.action not in ('create',):
+            return UserInSubscriptionSerializer
+
+        return SubscriptionSerializer
 
     def get_queryset(self):
         me = self.request.user
@@ -164,8 +156,33 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
         new_queryset = User.objects.filter(id__in=author_id_queryset)
         return new_queryset
 
-    def create(self, request, *args, **kwargs):  # perform_create
-        # def perform_create(self, serializer):
+    # def create(self, request, *args, **kwargs):
+    #     author_id = self.kwargs.get('user_id')
+    #     # проверка, что такого Subscription уже нет в БД
+    #     queryset = Subscription.objects.filter(
+    #         follower=self.request.user,
+    #         author_id=author_id
+    #     )
+    #
+    #     if len(queryset) > 0:
+    #         raise serializers.ValidationError(
+    #             'Вы уже подписаны на этого автора!'
+    #         )
+    #
+    #     if User.objects.get(id=author_id) == self.request.user:
+    #         raise serializers.ValidationError(
+    #             'Нельзя подписываться на себя!'
+    #         )
+    #
+    #     # запись нового объекта Subscription
+    #     Subscription.objects.create(
+    #         follower=self.request.user,
+    #         author_id=author_id
+    #     )
+    #
+    #     return Response(status=status.HTTP_201_CREATED)
+
+    def perform_create(self, serializer):
         author_id = self.kwargs.get('user_id')
         # проверка, что такого Subscription уже нет в БД
         queryset = Subscription.objects.filter(
@@ -183,26 +200,18 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
                 'Нельзя подписываться на себя!'
             )
 
-        # запись нового объекта Subscription
-        Subscription.objects.create(
+        author_obj = User.objects.get(id=author_id)
+        print(author_obj)
+
+        # запись нового объекта Subscription (new!)
+        serializer.save(
             follower=self.request.user,
-            author_id=author_id
+            author_id=author_id,
         )
 
-        # author_obj = User.objects.get(id=author_id)
-        # print(author_obj)
-        #
-        # # запись нового объекта Subscription (new!)
-        # serializer.save(
-        #     follower=self.request.user,
-        #     author_id=author_id,
-        #     email=author_obj.email,
-        #     username=author_obj.username,
-        #     first_name=author_obj.first_name,
-        #     last_name=author_obj.last_name,
-        # )
-
         return Response(status=status.HTTP_201_CREATED)
+
+
 
     @action(detail=False,
             methods=('delete',),

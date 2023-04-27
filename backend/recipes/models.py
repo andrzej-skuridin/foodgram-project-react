@@ -189,7 +189,7 @@ class RecipeTag(models.Model):
 
     class Meta:
         verbose_name = 'Тег/Рецепт'
-        verbose_name_plural = 'Теги/Рецепты'
+        verbose_name_plural = 'Теги в рецептах'
         ordering = ('-id',)
 
 

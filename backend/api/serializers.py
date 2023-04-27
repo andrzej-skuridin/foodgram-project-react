@@ -26,6 +26,7 @@ class Base64ImageField(serializers.ImageField):
             data = ContentFile(base64.b64decode(imgstr), name='temp.' + ext)
         return super().to_internal_value(data)
 
+
 class UserListRetrieveSerializer(serializers.ModelSerializer):
     is_subscribed = serializers.SerializerMethodField()
 
@@ -307,17 +308,63 @@ class UserInSubscriptionSerializer(UserListRetrieveSerializer):
 
 
 class SubscriptionSerializer(serializers.ModelSerializer):
-    author = UserInSubscriptionSerializer(many=False, required=True)
+    # author = UserInSubscriptionSerializer(read_only=True)
+    # follower = UserInSubscriptionSerializer(many=False, required=False)
+    email = serializers.StringRelatedField(
+        source='author.email'
+    )
+    id = serializers.PrimaryKeyRelatedField(
+        source='author',
+        read_only=True
+    )
+    username = serializers.StringRelatedField(
+        source='author.username'
+    )
+    first_name = serializers.StringRelatedField(
+        source='author.first_name'
+    )
+    last_name = serializers.StringRelatedField(
+        source='author.last_name'
+    )
+    is_subscribed = serializers.SerializerMethodField(read_only=True)
+    recipes = serializers.SerializerMethodField(read_only=True)
+    recipes_count = serializers.SerializerMethodField(read_only=True)
+
 
     class Meta:
         model = Subscription
-        fields = '__all__'
-        validators = [
-            UniqueTogetherValidator(
-                queryset=Subscription.objects.all(),
-                fields=('follower', 'author')
+        fields = ('email',
+                  'id',
+                  'username',
+                  'first_name',
+                  'last_name',
+                  'is_subscribed',
+                  'recipes',
+                  'recipes_count'
+                  )
+
+    def get_is_subscribed(self, data):
+        current_user = self.context.get('request').user.id
+        author_id = int(self.context.get('request').parser_context.get('kwargs').get(
+            'user_id')
+        )
+        return Subscription.objects.filter(
+            follower_id=current_user, author_id=author_id).exists()
+
+    def get_recipes(self, data):
+        author_id = int(self.context.get('request').parser_context.get('kwargs').get(
+            'user_id')
             )
-        ]
+        recipes_queryset = Recipe.objects.filter(
+            author_id=author_id
+        )
+        return recipes_queryset.values()
+
+    def get_recipes_count(self, data):
+        author_id = int(self.context.get('request').parser_context.get('kwargs').get(
+            'user_id')
+        )
+        return len(Recipe.objects.filter(author_id=author_id))
 
 
 class FavoriteSerializer(serializers.ModelSerializer):
