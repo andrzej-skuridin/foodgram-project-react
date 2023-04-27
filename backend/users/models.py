@@ -17,27 +17,26 @@ class User(AbstractUser):
         unique=True,
         blank=False,
         validators=[validate_email, MaxLengthValidator(limit_value=254)],
-        help_text='Required. 254 characters or fewer.'
+        help_text='Required. 254 characters or fewer.',
     )
     first_name = models.CharField(
         max_length=150,
         blank=False,
         validators=[MaxLengthValidator(limit_value=150)],
-        help_text='Required. 150 characters or fewer.'
+        help_text='Required. 150 characters or fewer.',
     )
     last_name = models.CharField(
         max_length=150,
         blank=False,
         validators=[MaxLengthValidator(limit_value=150)],
-        help_text='Required. 150 characters or fewer.'
+        help_text='Required. 150 characters or fewer.',
     )
     password = models.CharField(
         max_length=150,
         blank=False,
         validators=[MaxLengthValidator(limit_value=150)],
-        help_text='Required. 150 characters or fewer.'
+        help_text='Required. 150 characters or fewer.',
     )
-
 
     class Meta:
         verbose_name = 'Пользователь'

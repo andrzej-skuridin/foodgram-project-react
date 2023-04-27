@@ -1,25 +1,41 @@
 from django.contrib import admin
 
-from .models import (Recipe,
-                     Ingredient,
-                     Tag,
-                     RecipeIngredient,
-                     RecipeTag,
-                     Favorite,
-                     ShoppingCart
-                     )
+from .models import (
+    Favorite,
+    Ingredient,
+    Recipe,
+    RecipeIngredient,
+    RecipeTag,
+    ShoppingCart,
+    Tag,
+)
 
 
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'slug',)
-    search_fields = ('id', 'name', 'slug',)
-    list_filter = ('name', 'slug',)
+    list_display = (
+        'id',
+        'name',
+        'slug',
+    )
+    search_fields = (
+        'id',
+        'name',
+        'slug',
+    )
+    list_filter = (
+        'name',
+        'slug',
+    )
 
 
 @admin.register(Ingredient)
 class IngredientAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'measurement_unit',)
+    list_display = (
+        'id',
+        'name',
+        'measurement_unit',
+    )
     search_fields = ('id', 'name', 'measurement_unit')
     list_filter = ('name',)
 
@@ -32,6 +48,7 @@ class RecipeAdmin(admin.ModelAdmin):
 
     def fav_counter(self, obj):
         return Favorite.objects.filter(recipe=obj).count()
+
     fav_counter.short_description = 'В избранном'
 
 
@@ -42,18 +59,43 @@ class RecipeIngredientAdmin(admin.ModelAdmin):
 
 @admin.register(Favorite)
 class FavoriteAdmin(admin.ModelAdmin):
-    list_display = ('id', 'follower', 'recipe',)
-    search_fields = ('id', 'follower', 'recipe',)
-    list_filter = ('follower', 'recipe',)
+    list_display = (
+        'id',
+        'follower',
+        'recipe',
+    )
+    search_fields = (
+        'id',
+        'follower',
+        'recipe',
+    )
+    list_filter = (
+        'follower',
+        'recipe',
+    )
 
 
 @admin.register(RecipeTag)
 class RecipeTagAdmin(admin.ModelAdmin):
-    list_display = ('id', 'tag', 'recipe',)
+    list_display = (
+        'id',
+        'tag',
+        'recipe',
+    )
 
 
 @admin.register(ShoppingCart)
 class ShoppingCartAdmin(admin.ModelAdmin):
-    list_display = ('id', 'client', 'recipe',)
-    search_fields = ('client', 'recipe',)
-    list_filter = ('client', 'recipe',)
+    list_display = (
+        'id',
+        'client',
+        'recipe',
+    )
+    search_fields = (
+        'client',
+        'recipe',
+    )
+    list_filter = (
+        'client',
+        'recipe',
+    )

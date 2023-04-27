@@ -1,30 +1,42 @@
 import csv
 from collections import defaultdict
 
-from django.shortcuts import render, get_object_or_404
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, mixins, viewsets, serializers, status
+from rest_framework import filters, mixins, serializers, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
-import io
-from django.http import FileResponse, HttpResponse
-from reportlab.pdfgen import canvas
-from django.template import loader
 
 from api.filters import RecipeFilter
 from api.permissions import IsOwnerOrReadOnly
-from api.serializers import RecipeListSerializer, RecipeCreateUpdateSerializer, IngredientSerializer, TagSerializer, \
-    UserInSubscriptionSerializer, FavoriteSerializer, ShoppingCartSerializer, UserListRetrieveSerializer, \
-    SubscriptionSerializer
-from recipes.models import Recipe, Tag, Ingredient, Favorite, ShoppingCart, RecipeIngredient
+from api.serializers import (
+    FavoriteSerializer,
+    IngredientSerializer,
+    RecipeCreateUpdateSerializer,
+    RecipeListSerializer,
+    ShoppingCartSerializer,
+    SubscriptionSerializer,
+    TagSerializer,
+    UserInSubscriptionSerializer,
+    UserListRetrieveSerializer,
+)
+from recipes.models import (
+    Favorite,
+    Ingredient,
+    Recipe,
+    RecipeIngredient,
+    ShoppingCart,
+    Tag,
+)
 from users.models import Subscription, User
 
 
-class MeViewSet(mixins.ListModelMixin,
-                viewsets.GenericViewSet):
+class MeViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     """Костыль против ошибки при обращении анонима к эндпоинту /me"""
+
     permission_classes = (IsAuthenticated,)
     serializer_class = UserListRetrieveSerializer
     pagination_class = None
@@ -58,7 +70,9 @@ class RecipeViewSet(ModelViewSet):
         return RecipeListSerializer
 
     def get_queryset(self):
-        new_queryset = Recipe.objects.add_user_annotations(self.request.user.pk)
+        new_queryset = Recipe.objects.add_user_annotations(
+            self.request.user.pk
+        )
 
         # Фильтры из GET-параметров запроса, например.
         author = self.request.query_params.get('author', None)
@@ -67,15 +81,18 @@ class RecipeViewSet(ModelViewSet):
 
         return new_queryset
 
-    @action(detail=False,
-            methods=('get',),
-            permission_classes=(IsAuthenticated,),
-            serializer_class=None,
-            url_path=''  # возможно тут надо будет оказать путь
-            )
+    @action(
+        detail=False,
+        methods=('get',),
+        permission_classes=(IsAuthenticated,),
+        serializer_class=None,
+        url_path='',  # возможно тут надо будет оказать путь
+    )
     def download_shopping_cart(self, request):
         client = self.request.user
-        shopping_cart_objects = ShoppingCart.objects.filter(client=client).all()
+        shopping_cart_objects = ShoppingCart.objects.filter(
+            client=client
+        ).all()
         shopping_list = defaultdict()
 
         if len(shopping_cart_objects) < 1:
@@ -84,23 +101,24 @@ class RecipeViewSet(ModelViewSet):
         ingredients = RecipeIngredient.objects.filter(
             recipe__in_shopping_list__client_id=client
         ).values_list(
-            'ingredient__name',
-            'ingredient__measurement_unit',
-            'amount'
+            'ingredient__name', 'ingredient__measurement_unit', 'amount'
         )
 
         for name, unit, amount in ingredients:
             if name not in shopping_list.keys():
                 shopping_list[name] = {
                     'measurement_unit': unit,
-                    'amount': amount
+                    'amount': amount,
                 }
             else:
                 shopping_list[name]['amount'] += amount
 
         response = HttpResponse(
             content_type='text/csv',
-            headers={'Content-Disposition': 'attachment; filename="shopping_list.csv"'},
+            headers={
+                'Content-Disposition':
+                    'attachment; filename="shopping_list.csv"'
+            },
         )
 
         writer = csv.writer(response)
@@ -108,16 +126,18 @@ class RecipeViewSet(ModelViewSet):
         array_of_rows = list()
 
         for name, vals in shopping_list.items():
-            array_of_rows.append((name, vals['measurement_unit'], vals['amount']))
+            array_of_rows.append(
+                (name, vals['measurement_unit'], vals['amount'])
+            )
         for row in array_of_rows:
             writer.writerow(row)
 
         return response
 
 
-class IngredientViewSet(mixins.ListModelMixin,
-                        mixins.RetrieveModelMixin,
-                        viewsets.GenericViewSet):
+class IngredientViewSet(
+    mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
+):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
     pagination_class = None
@@ -127,9 +147,9 @@ class IngredientViewSet(mixins.ListModelMixin,
     search_fields = ('^name',)
 
 
-class TagViewSet(mixins.ListModelMixin,
-                 mixins.RetrieveModelMixin,
-                 viewsets.GenericViewSet):
+class TagViewSet(
+    mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
+):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
     pagination_class = None
@@ -138,56 +158,30 @@ class TagViewSet(mixins.ListModelMixin,
 
 class SubscriptionViewSet(viewsets.ModelViewSet):
     http_method_names = ['get', 'post', 'delete']
-    permission_classes = IsAuthenticated,
-    # serializer_class = UserInSubscriptionSerializer
+    permission_classes = (IsAuthenticated,)
 
     def get_serializer_class(self):
         if self.action not in ('create',):
             return UserInSubscriptionSerializer
-
         return SubscriptionSerializer
 
     def get_queryset(self):
         me = self.request.user
         # этот queryset выдаёт набор id авторов, на которых подписан пользователь
-        author_id_queryset = Subscription.objects.filter(follower=me).values_list(
-            'author_id', flat=True).order_by('id')
+        author_id_queryset = (
+            Subscription.objects.filter(follower=me)
+            .values_list('author_id', flat=True)
+            .order_by('id')
+        )
         # см. документацию по Field lookups из object.filter
         new_queryset = User.objects.filter(id__in=author_id_queryset)
         return new_queryset
-
-    # def create(self, request, *args, **kwargs):
-    #     author_id = self.kwargs.get('user_id')
-    #     # проверка, что такого Subscription уже нет в БД
-    #     queryset = Subscription.objects.filter(
-    #         follower=self.request.user,
-    #         author_id=author_id
-    #     )
-    #
-    #     if len(queryset) > 0:
-    #         raise serializers.ValidationError(
-    #             'Вы уже подписаны на этого автора!'
-    #         )
-    #
-    #     if User.objects.get(id=author_id) == self.request.user:
-    #         raise serializers.ValidationError(
-    #             'Нельзя подписываться на себя!'
-    #         )
-    #
-    #     # запись нового объекта Subscription
-    #     Subscription.objects.create(
-    #         follower=self.request.user,
-    #         author_id=author_id
-    #     )
-    #
-    #     return Response(status=status.HTTP_201_CREATED)
 
     def perform_create(self, serializer):
         author_id = self.kwargs.get('user_id')
         # проверка, что такого Subscription уже нет в БД
         queryset = Subscription.objects.filter(
-            follower=self.request.user,
-            author_id=author_id
+            follower=self.request.user, author_id=author_id
         )
 
         if len(queryset) > 0:
@@ -196,9 +190,7 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
             )
 
         if User.objects.get(id=author_id) == self.request.user:
-            raise serializers.ValidationError(
-                'Нельзя подписываться на себя!'
-            )
+            raise serializers.ValidationError('Нельзя подписываться на себя!')
 
         author_obj = User.objects.get(id=author_id)
         print(author_obj)
@@ -211,16 +203,15 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
 
         return Response(status=status.HTTP_201_CREATED)
 
-
-
-    @action(detail=False,
-            methods=('delete',),
-            permission_classes=IsAuthenticated,
-            # url /subscribe/ обрабатывается в urls.py, видимо поэтому
-            # работает при таком пути, возможно и стереть можно,
-            # но раз работает, не чиню
-            url_path=r'users/(?P<user_pk>\d+)/',
-            )
+    @action(
+        detail=False,
+        methods=('delete',),
+        permission_classes=IsAuthenticated,
+        # url /subscribe/ обрабатывается в urls.py, видимо поэтому
+        # работает при таком пути, возможно и стереть можно,
+        # но раз работает, не чиню
+        url_path=r'users/(?P<user_pk>\d+)/',
+    )
     def delete(self, request, *args, **kwargs):
         # почему-то называть надо именно delete
         # (сработает ли perform_destroy, проверить)
@@ -230,8 +221,7 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
 
         # проверка, что такая Subscription существует в БД
         queryset = Subscription.objects.filter(
-            follower=self.request.user,
-            author_id=author_id
+            follower=self.request.user, author_id=author_id
         )
         if len(queryset) == 0:
             raise serializers.ValidationError(
@@ -239,25 +229,27 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
             )
 
         Subscription.objects.filter(
-            follower=self.request.user, author_id=author_id).delete()
+            follower=self.request.user, author_id=author_id
+        ).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class FavoriteViewSet(viewsets.ModelViewSet):
     http_method_names = ['post', 'delete']
     serializer_class = FavoriteSerializer
-    permission_classes = IsAuthenticated,
+    permission_classes = (IsAuthenticated,)
 
     def get_queryset(self):
         recipe_id = self.kwargs.get('recipe_id')
-        new_queryset = Favorite.objects.filter(
-            recipe=recipe_id)
+        new_queryset = Favorite.objects.filter(recipe=recipe_id)
         return new_queryset
 
-    @action(detail=False,
-            methods=('delete',),
-            permission_classes=IsAuthenticated,
-            url_path='')
+    @action(
+        detail=False,
+        methods=('delete',),
+        permission_classes=IsAuthenticated,
+        url_path='',
+    )
     def delete(self, request, *args, **kwargs):
         # стандартный viewset разрешает метод delete только на something/id/
         # поэтому если /something/something_else/, придётся @action писать
@@ -265,8 +257,7 @@ class FavoriteViewSet(viewsets.ModelViewSet):
 
         # проверка, что такой Favorite существует в БД
         queryset = Favorite.objects.filter(
-            follower=self.request.user,
-            recipe=recipe_id
+            follower=self.request.user, recipe=recipe_id
         )
         if len(queryset) == 0:
             raise serializers.ValidationError(
@@ -282,8 +273,7 @@ class FavoriteViewSet(viewsets.ModelViewSet):
 
         # проверка, что такого Favorite уже нет в БД
         queryset = Favorite.objects.filter(
-            follower=self.request.user,
-            recipe=recipe_id
+            follower=self.request.user, recipe=recipe_id
         )
         if len(queryset) > 0:
             raise serializers.ValidationError(
@@ -291,34 +281,30 @@ class FavoriteViewSet(viewsets.ModelViewSet):
             )
 
         # запись нового объекта Favorite
-        serializer.save(
-            follower=self.request.user,
-            recipe=recipe
-        )
+        serializer.save(follower=self.request.user, recipe=recipe)
 
         return Response(status=status.HTTP_201_CREATED)
 
 
 class ShoppingCartViewSet(
-    mixins.CreateModelMixin,
-    mixins.DestroyModelMixin,
-    viewsets.GenericViewSet
+    mixins.CreateModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet
 ):
     http_method_names = ['post', 'delete']
-    permission_classes = IsAuthenticated,
+    permission_classes = (IsAuthenticated,)
     pagination_class = None
     serializer_class = ShoppingCartSerializer
 
     def get_queryset(self):
-        new_queryset = ShoppingCart.objects.filter(
-            client=self.request.user)
+        new_queryset = ShoppingCart.objects.filter(client=self.request.user)
         return new_queryset
 
-    @action(detail=False,
-            methods=('delete',),
-            permission_classes=IsAuthenticated,
-            serializer_class=ShoppingCartSerializer,
-            url_path='')
+    @action(
+        detail=False,
+        methods=('delete',),
+        permission_classes=IsAuthenticated,
+        serializer_class=ShoppingCartSerializer,
+        url_path='',
+    )
     def delete(self, request, *args, **kwargs):
         # стандартный viewset разрешает метод delete только на something/id/
         # поэтому если /something/something_else/, придётся @action писать
@@ -326,8 +312,7 @@ class ShoppingCartViewSet(
 
         # проверка, что такой ShoppingCart существует в БД
         queryset = ShoppingCart.objects.filter(
-            client=self.request.user,
-            recipe=recipe_id
+            client=self.request.user, recipe=recipe_id
         )
         if len(queryset) == 0:
             raise serializers.ValidationError(
@@ -335,8 +320,7 @@ class ShoppingCartViewSet(
             )
 
         ShoppingCart.objects.filter(
-            client=self.request.user,
-            recipe=recipe_id
+            client=self.request.user, recipe=recipe_id
         ).delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -347,8 +331,7 @@ class ShoppingCartViewSet(
 
         # проверка, что такого ShoppingCart уже нет в БД
         queryset = ShoppingCart.objects.filter(
-            client=self.request.user,
-            recipe=recipe_id
+            client=self.request.user, recipe=recipe_id
         )
         if len(queryset) > 0:
             raise serializers.ValidationError(

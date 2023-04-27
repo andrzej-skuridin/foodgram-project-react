@@ -21,7 +21,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-6gwt&_lxtum+ra5j5$_hf-k0-d8o-hhbf3d4lgd6o54i*a9@dg'
+SECRET_KEY = (
+    'django-insecure-6gwt&_lxtum+ra5j5$_hf-k0-d8o-hhbf3d4lgd6o54i*a9@dg'
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -38,16 +40,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
     'rest_framework',
     'rest_framework.authtoken',
     'djoser',
     'django_filters',
-
     'api.apps.ApiConfig',
     'recipes.apps.RecipesConfig',
     'users.apps.UsersConfig',
-
 ]
 
 MIDDLEWARE = [
@@ -141,13 +140,11 @@ AUTH_USER_MODEL = 'users.User'
 
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
-            'rest_framework.permissions.AllowAny',
-        ],
-
+        'rest_framework.permissions.AllowAny',
+    ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
     ],
-
     'DEFAULT_PAGINATION_CLASS': 'api.pagination.PageLimitPagination',
     'PAGE_SIZE': 5,
 }
@@ -155,20 +152,19 @@ REST_FRAMEWORK = {
 DJOSER = {
     'HIDE_USERS': False,  # зачем-то нужно, забыл, зачем именно. См. документацию
     # 'LOGIN_FIELD': 'email',  # не фурычит, не знаю, почему, сделал через модель
-
     'PERMISSIONS': {
-        'user_list': ['rest_framework.permissions.AllowAny'],  # отвечает за список юзеров
+        'user_list': [
+            'rest_framework.permissions.AllowAny'
+        ],  # отвечает за список юзеров
         'user_create': ['rest_framework.permissions.AllowAny'],
         # 'user': ['djoser.permissions.CurrentUserOrAdminOrReadOnly'],  # отвечает за RETRIEVE single user, users/me
         'user': ['api.permissions.IsOwnerOrReadOnly'],
         'token_create': ['rest_framework.permissions.AllowAny'],
         'token_destroy': ['rest_framework.permissions.IsAuthenticated'],
     },
-
     'SERIALIZERS': {
         'user': 'api.serializers.UserListRetrieveSerializer',
-        #/users/me   /users/id/  ошибка у анонима
+        # /users/me   /users/id/  ошибка у анонима
         'current_user': 'api.serializers.UserListRetrieveSerializer',
     },
-
 }

@@ -1,6 +1,10 @@
 from typing import Optional
 
-from django.core.validators import MaxLengthValidator, validate_slug, validate_integer
+from django.core.validators import (
+    MaxLengthValidator,
+    validate_integer,
+    validate_slug,
+)
 from django.db import models
 from django.db.models import Exists, OuterRef
 
@@ -22,10 +26,7 @@ class Tag(models.Model):
     slug = models.SlugField(
         verbose_name='Уникальная строка-идентификатор',
         max_length=200,
-        validators=[
-            validate_slug,
-            MaxLengthValidator(limit_value=200)
-        ],
+        validators=[validate_slug, MaxLengthValidator(limit_value=200)],
     )
 
     class Meta:
@@ -37,8 +38,7 @@ class Tag(models.Model):
 class Ingredient(models.Model):
     name = models.CharField(max_length=200, verbose_name='Название')
     measurement_unit = models.CharField(
-        max_length=200,
-        verbose_name='Единицы измерения'
+        max_length=200, verbose_name='Единицы измерения'
     )
 
     class Meta:
@@ -50,7 +50,6 @@ class Ingredient(models.Model):
 
 
 class RecipeQuerySet(models.QuerySet):
-
     def add_user_annotations(self, user_id: Optional[int]):
         return self.annotate(
             is_favorited=Exists(
@@ -71,43 +70,33 @@ class Recipe(models.Model):
         to=Tag,
         through='RecipeTag',
         through_fields=('recipe', 'tag'),
-        verbose_name='Теги'
+        verbose_name='Теги',
     )
     author = models.ForeignKey(
         to=User,
         on_delete=models.CASCADE,
         related_name='recipes',
-        verbose_name='Автор'
+        verbose_name='Автор',
     )
-    name = models.CharField(
-        max_length=200,
-        verbose_name='Название рецепта'
-    )
+    name = models.CharField(max_length=200, verbose_name='Название рецепта')
     text = models.TextField(verbose_name='Текст')
     ingredients = models.ManyToManyField(
         to=Ingredient,
         through='RecipeIngredient',
         through_fields=('recipe', 'ingredient'),
-        verbose_name='Ингредиенты'
+        verbose_name='Ингредиенты',
     )
     pub_date = models.DateTimeField(
-        verbose_name='Дата публикации',
-        auto_now_add=True,
-        db_index=True
+        verbose_name='Дата публикации', auto_now_add=True, db_index=True
     )
     cooking_time = models.IntegerField(
         verbose_name='Время приготовления',
         max_length=10,
-        validators=[
-            validate_cooking_time,
-            validate_integer
-        ],
+        validators=[validate_cooking_time, validate_integer],
         help_text='Required. 10 characters or fewer.',
     )
     image = models.ImageField(
-        upload_to='recipes/images/',
-        null=True,
-        default=None
+        upload_to='recipes/images/', null=True, default=None
     )
 
     objects = RecipeQuerySet.as_manager()
@@ -122,18 +111,12 @@ class Recipe(models.Model):
 
 
 class RecipeIngredient(models.Model):
-    amount = models.PositiveIntegerField(
-        verbose_name='Количество'
-    )
+    amount = models.PositiveIntegerField(verbose_name='Количество')
     ingredient = models.ForeignKey(
-        Ingredient,
-        on_delete=models.CASCADE,
-        verbose_name='Ингредиент'
+        Ingredient, on_delete=models.CASCADE, verbose_name='Ингредиент'
     )
     recipe = models.ForeignKey(
-        Recipe,
-        on_delete=models.CASCADE,
-        verbose_name='Рецепт'
+        Recipe, on_delete=models.CASCADE, verbose_name='Рецепт'
     )
 
     def __str__(self):
@@ -167,7 +150,7 @@ class Favorite(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=('follower', 'recipe'),
-                name='unique_favorite_follower_recipe'
+                name='unique_favorite_follower_recipe',
             )
         ]
         verbose_name = 'Объект избранного'
