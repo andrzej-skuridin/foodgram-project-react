@@ -13,11 +13,21 @@ from api.views import (
 
 router = routers.DefaultRouter()
 
-router.register(prefix='tags', basename='tags', viewset=TagViewSet)
 router.register(
-    prefix='ingredients', basename='ingredients', viewset=IngredientViewSet
+    prefix='tags',
+    basename='tags',
+    viewset=TagViewSet
 )
-router.register(prefix='recipes', basename='recipes', viewset=RecipeViewSet)
+router.register(
+    prefix='ingredients',
+    basename='ingredients',
+    viewset=IngredientViewSet
+)
+router.register(
+    prefix='recipes',
+    basename='recipes',
+    viewset=RecipeViewSet
+)
 router.register(
     prefix=r'recipes/(?P<recipe_id>\d+)/favorite',
     viewset=FavoriteViewSet,

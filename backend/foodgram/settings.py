@@ -81,7 +81,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'foodgram.wsgi.application'
 
-
+# Пока на всякий случай не удаляю для быстрого отката
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
 
@@ -168,16 +168,14 @@ DJOSER = {
     'PERMISSIONS': {
         'user_list': [
             'rest_framework.permissions.AllowAny'
-        ],  # отвечает за список юзеров
+        ],
         'user_create': ['rest_framework.permissions.AllowAny'],
-        # 'user': ['djoser.permissions.CurrentUserOrAdminOrReadOnly'],  # отвечает за RETRIEVE single user, users/me
         'user': ['api.permissions.IsOwnerOrReadOnly'],
         'token_create': ['rest_framework.permissions.AllowAny'],
         'token_destroy': ['rest_framework.permissions.IsAuthenticated'],
     },
     'SERIALIZERS': {
         'user': 'api.serializers.UserListRetrieveSerializer',
-        # /users/me   /users/id/  ошибка у анонима
         'current_user': 'api.serializers.UserListRetrieveSerializer',
     },
 }

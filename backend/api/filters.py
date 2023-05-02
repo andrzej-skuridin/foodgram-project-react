@@ -6,7 +6,6 @@ from recipes.models import Recipe
 class RecipeFilter(filters.FilterSet):
     tags = filters.CharFilter(field_name='tags__slug')
     # фильтровать немодельные поля можно только если они сделаны через аннотирование
-    # если через метод филд, то идём лесом. is_in_shopping_cart надо переделать через аннотирование
     is_favorited = filters.BooleanFilter(
         field_name='is_favorited'
     )  # нельзя это вписывать в мета

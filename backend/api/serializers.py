@@ -21,16 +21,9 @@ class Base64ImageField(serializers.ImageField):
     """Поле картинки по теории Практикума"""
 
     def to_internal_value(self, data):
-        # Если полученный объект строка, и эта строка
-        # начинается с 'data:image'...
         if isinstance(data, str) and data.startswith('data:image'):
-            # ...начинаем декодировать изображение из base64.
-            # Сначала нужно разделить строку на части.
             format, imgstr = data.split(';base64,')
-            # И извлечь расширение файла.
             ext = format.split('/')[-1]
-            # Затем декодировать сами данные и поместить результат в файл,
-            # которому дать название по шаблону.
             data = ContentFile(base64.b64decode(imgstr), name='temp.' + ext)
         return super().to_internal_value(data)
 
@@ -98,18 +91,23 @@ class RecipeListSerializer(serializers.ModelSerializer):
     is_in_shopping_cart = serializers.BooleanField()
     is_favorited = serializers.BooleanField()
     author = UserListRetrieveSerializer()
-    image = Base64ImageField(required=False, allow_null=True)
+    image = Base64ImageField(
+        required=False,
+        allow_null=True
+    )
 
     def get_ingredients(self, obj):
         """Возвращает отдельный сериализатор."""
         return RecipeIngredientSerializer(
-            RecipeIngredient.objects.filter(recipe=obj).all(), many=True
+            RecipeIngredient.objects.filter(recipe=obj).all(),
+            many=True
         ).data
 
     def get_tags(self, obj):
         """Возвращает отдельный сериализатор."""
         return RecipeTagSerializer(
-            RecipeTag.objects.filter(recipe_id=obj).all(), many=True
+            RecipeTag.objects.filter(recipe_id=obj).all(),
+            many=True
         ).data
 
     class Meta:
@@ -133,7 +131,8 @@ class IngredientCreateInRecipeSerializer(serializers.ModelSerializer):
 
     recipe = serializers.PrimaryKeyRelatedField(read_only=True)
     id = serializers.PrimaryKeyRelatedField(
-        source='ingredient', queryset=Ingredient.objects.all()
+        source='ingredient',
+        queryset=Ingredient.objects.all()
     )
     amount = serializers.IntegerField(write_only=True, min_value=1)
 
@@ -146,7 +145,8 @@ class TagCreateInRecipeSerializer(serializers.ModelSerializer):
     """Сериализатор тегов в создании рецепта."""
 
     id = serializers.PrimaryKeyRelatedField(
-        source='tag', queryset=Tag.objects.all()
+        source='tag',
+        queryset=Tag.objects.all()
     )
     recipe = serializers.PrimaryKeyRelatedField(read_only=True)
 
@@ -305,8 +305,6 @@ class UserInSubscriptionSerializer(UserListRetrieveSerializer):
 
 
 class SubscriptionSerializer(serializers.ModelSerializer):
-    # author = UserInSubscriptionSerializer(read_only=True)
-    # follower = UserInSubscriptionSerializer(many=False, required=False)
     email = serializers.StringRelatedField(source='author.email')
     id = serializers.PrimaryKeyRelatedField(source='author', read_only=True)
     username = serializers.StringRelatedField(source='author.username')

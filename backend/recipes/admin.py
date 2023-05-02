@@ -1,4 +1,6 @@
 from django.contrib import admin
+from import_export import resources
+from import_export.admin import ImportExportModelAdmin
 
 from .models import (
     Favorite,
@@ -30,7 +32,7 @@ class TagAdmin(admin.ModelAdmin):
 
 
 @admin.register(Ingredient)
-class IngredientAdmin(admin.ModelAdmin):
+class IngredientAdmin(ImportExportModelAdmin):
     list_display = (
         'id',
         'name',
@@ -38,6 +40,12 @@ class IngredientAdmin(admin.ModelAdmin):
     )
     search_fields = ('id', 'name', 'measurement_unit')
     list_filter = ('name',)
+
+
+class IngredientResource(resources.ModelResource):
+
+    class Meta:
+        model = Ingredient
 
 
 @admin.register(Recipe)
