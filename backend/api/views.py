@@ -30,6 +30,7 @@ from recipes.models import (
     RecipeIngredient,
     ShoppingCart,
     Tag,
+    RecipeTag,
 )
 from users.models import Subscription, User
 
@@ -44,6 +45,23 @@ class MeViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     def get_queryset(self):
         new_queryset = User.objects.filter(id=self.request.user.pk)
         return new_queryset
+
+    def get_serializer_context(self):
+        print(set(
+            Subscription.objects.filter(
+                follower_id=self.request.user
+            ).values_list('author_id', flat=True)
+        ))
+        return {
+            'request': self.request,
+            'format': self.format_kwarg,
+            'view': self,
+            'subscriptions': set(
+                Subscription.objects.filter(
+                    follower_id=self.request.user
+                ).values_list('author_id', flat=True)
+            )
+        }
 
 
 class RecipeViewSet(ModelViewSet):
@@ -69,6 +87,33 @@ class RecipeViewSet(ModelViewSet):
 
         return RecipeListSerializer
 
+    def get_serializer_context(self):
+        return {
+            'request': self.request,
+            'format': self.format_kwarg,
+            'view': self,
+            'recipe-tag':
+                RecipeTag.objects.filter(
+                    recipe_id=self.kwargs.get('pk')
+                ).all(),
+            'recipe-ingredient':
+                RecipeIngredient.objects.filter(
+                    recipe_id=self.kwargs.get('pk')
+                ).all(),
+            'is_favorited':
+                set(
+                    Favorite.objects.filter(
+                        follower_id=self.request.user
+                    ).values_list('recipe_id', flat=True)
+                ),
+            'is_in_shopping_cart':
+                set(
+                    ShoppingCart.objects.filter(
+                        client_id=self.request.user
+                    ).values_list('recipe_id', flat=True)
+                ),
+        }
+
     def get_queryset(self):
         new_queryset = Recipe.objects.add_user_annotations(
             self.request.user.pk
@@ -86,7 +131,7 @@ class RecipeViewSet(ModelViewSet):
         methods=('get',),
         permission_classes=(IsAuthenticated,),
         serializer_class=None,
-        url_path='',  # возможно тут надо будет оказать путь
+        url_path='',
     )
     def download_shopping_cart(self, request):
         client = self.request.user
@@ -165,6 +210,18 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
             return UserInSubscriptionSerializer
         return SubscriptionSerializer
 
+    def get_serializer_context(self):
+        return {
+            'request': self.request,
+            'format': self.format_kwarg,
+            'view': self,
+            'subscriptions': set(
+                Subscription.objects.filter(
+                    follower_id=self.request.user
+                ).values_list('author_id', flat=True)
+            ),
+        }
+
     def get_queryset(self):
         me = self.request.user
         # этот queryset выдаёт набор id авторов, на которых подписан пользователь
@@ -207,16 +264,10 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
         detail=False,
         methods=('delete',),
         permission_classes=IsAuthenticated,
-        # url /subscribe/ обрабатывается в urls.py, видимо поэтому
-        # работает при таком пути, возможно и стереть можно,
-        # но раз работает, не чиню
         url_path=r'users/(?P<user_pk>\d+)/',
+        url_name='subscription-delete',
     )
     def delete(self, request, *args, **kwargs):
-        # почему-то называть надо именно delete
-        # (сработает ли perform_destroy, проверить)
-        # стандартный viewset разрешает метод delete только на something/id/
-        # поэтому если /something/something_else, придётся @action писать
         author_id = self.kwargs.get('user_id')
 
         # проверка, что такая Subscription существует в БД
@@ -249,6 +300,7 @@ class FavoriteViewSet(viewsets.ModelViewSet):
         methods=('delete',),
         permission_classes=IsAuthenticated,
         url_path='',
+        url_name='favorite-delete',
     )
     def delete(self, request, *args, **kwargs):
         # стандартный viewset разрешает метод delete только на something/id/
@@ -287,7 +339,9 @@ class FavoriteViewSet(viewsets.ModelViewSet):
 
 
 class ShoppingCartViewSet(
-    mixins.CreateModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet
+    mixins.CreateModelMixin,
+    mixins.DestroyModelMixin,
+    viewsets.GenericViewSet
 ):
     http_method_names = ['post', 'delete']
     permission_classes = (IsAuthenticated,)
@@ -306,8 +360,6 @@ class ShoppingCartViewSet(
         url_path='',
     )
     def delete(self, request, *args, **kwargs):
-        # стандартный viewset разрешает метод delete только на something/id/
-        # поэтому если /something/something_else/, придётся @action писать
         recipe_id = self.kwargs.get('recipe_id')
 
         # проверка, что такой ShoppingCart существует в БД

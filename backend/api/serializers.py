@@ -98,6 +98,11 @@ class RecipeListSerializer(serializers.ModelSerializer):
 
     def get_ingredients(self, obj):
         """Возвращает отдельный сериализатор."""
+        if len(self.context['recipe-ingredient']) != 0:
+            return RecipeIngredientSerializer(
+                self.context['recipe-ingredient'],
+                many=True
+            ).data
         return RecipeIngredientSerializer(
             RecipeIngredient.objects.filter(recipe=obj).all(),
             many=True
@@ -105,6 +110,11 @@ class RecipeListSerializer(serializers.ModelSerializer):
 
     def get_tags(self, obj):
         """Возвращает отдельный сериализатор."""
+        if len(self.context['recipe-tag']) != 0:
+            return RecipeTagSerializer(
+                self.context['recipe-tag'],
+                many=True
+            ).data
         return RecipeTagSerializer(
             RecipeTag.objects.filter(recipe_id=obj).all(),
             many=True
@@ -165,22 +175,10 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
     is_in_shopping_cart = serializers.SerializerMethodField()
 
     def get_is_favorited(self, obj):
-        if Favorite.objects.filter(recipe_id=obj.id).exists():
-            return (
-                self.context.get('request').user.id
-                == get_object_or_404(Favorite, recipe_id=obj.id).follower.id
-            )
-        return False
+        return obj.id in self.context['is_favorited']
 
     def get_is_in_shopping_cart(self, obj):
-        if ShoppingCart.objects.filter(
-            recipe=obj.id, client=self.context.get('request').user.id
-        ).exists():
-            return (
-                self.context.get('request').user.id
-                == get_object_or_404(ShoppingCart, recipe_id=obj.id).client.id
-            )
-        return False
+        return obj.id in self.context['is_in_shopping_cart']
 
     def validate_ingredients(self, value):
         if len(value) < 1:
@@ -242,11 +240,13 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
         representation = super().to_representation(obj)
 
         representation['ingredients'] = RecipeIngredientSerializer(
-            RecipeIngredient.objects.filter(recipe=obj).all(), many=True
+            self.context['recipe-ingredient'],
+            many=True
         ).data
 
         representation['tags'] = RecipeTagSerializer(
-            RecipeTag.objects.filter(recipe=obj).all(), many=True
+            self.context['recipe-tag'],
+            many=True
         ).data
 
         return representation
@@ -327,16 +327,8 @@ class SubscriptionSerializer(serializers.ModelSerializer):
             'recipes_count',
         )
 
-    def get_is_subscribed(self, data):
-        current_user = self.context.get('request').user.id
-        author_id = int(
-            self.context.get('request')
-            .parser_context.get('kwargs')
-            .get('user_id')
-        )
-        return Subscription.objects.filter(
-            follower_id=current_user, author_id=author_id
-        ).exists()
+    def get_is_subscribed(self, obj):
+        return obj.id in self.context['subscriptions']
 
     def get_recipes(self, data):
         author_id = int(
