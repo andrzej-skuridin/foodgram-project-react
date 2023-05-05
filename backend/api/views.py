@@ -47,11 +47,6 @@ class MeViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
         return new_queryset
 
     def get_serializer_context(self):
-        print(set(
-            Subscription.objects.filter(
-                follower_id=self.request.user
-            ).values_list('author_id', flat=True)
-        ))
         return {
             'request': self.request,
             'format': self.format_kwarg,

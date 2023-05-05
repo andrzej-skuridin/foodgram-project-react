@@ -98,7 +98,7 @@ class RecipeListSerializer(serializers.ModelSerializer):
 
     def get_ingredients(self, obj):
         """Возвращает отдельный сериализатор."""
-        if len(self.context['recipe-ingredient']) != 0:
+        if self.context['recipe-ingredient']:
             return RecipeIngredientSerializer(
                 self.context['recipe-ingredient'],
                 many=True
@@ -110,7 +110,7 @@ class RecipeListSerializer(serializers.ModelSerializer):
 
     def get_tags(self, obj):
         """Возвращает отдельный сериализатор."""
-        if len(self.context['recipe-tag']) != 0:
+        if self.context['recipe-tag']:
             return RecipeTagSerializer(
                 self.context['recipe-tag'],
                 many=True
