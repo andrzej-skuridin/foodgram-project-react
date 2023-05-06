@@ -20,10 +20,12 @@ services:
 
   frontend:
     build:
-      context: ../frontend
-      dockerfile: Dockerfile
+      image: morhond/foodgram_frontend:v1
     volumes:
       - ../frontend/:/app/result_build/
+    depends_on:
+      - backend
+  
   nginx:
     image: nginx:1.19.3
     ports:
