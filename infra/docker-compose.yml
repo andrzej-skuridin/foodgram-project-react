@@ -8,7 +8,7 @@ services:
       - ./.env
 
   backend:
-    image: morhond/foodgram_backend:latest
+    image: morhond/foodgram_backend:v1
     restart: always
     volumes:
       - static_value:/app/static/
