@@ -39,7 +39,7 @@ jobs:
           uses: docker/build-push-action@v2
           with:
             push: true
-            tags: ${{ secrets.DOCKER_USERNAME }}/foodgram_backend:latest
+            tags: ${{ secrets.DOCKER_USERNAME }}/foodgram_backend:v1
 
   deploy:
     runs-on: ubuntu-latest
@@ -63,5 +63,5 @@ jobs:
             sudo echo POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }} >> .env
             sudo echo DB_HOST=${{ secrets.DB_HOST }} >> .env
             sudo echo DB_PORT=${{ secrets.DB_PORT }} >> .env
-            sudo docker pull ${{ secrets.DOCKER_USERNAME }}/foodgram_backend:latest
+            sudo docker pull ${{ secrets.DOCKER_USERNAME }}/foodgram_backend:v1
             sudo docker compose up -d
