@@ -19,8 +19,7 @@ services:
       - ./.env
 
   frontend:
-    build:
-      image: morhond/foodgram_frontend:v1
+    image: morhond/foodgram_frontend:v1
     volumes:
       - ../frontend/:/app/result_build/
     depends_on:
