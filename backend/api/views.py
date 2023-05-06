@@ -83,6 +83,32 @@ class RecipeViewSet(ModelViewSet):
         return RecipeListSerializer
 
     def get_serializer_context(self):
+        if self.request.user.is_authenticated:
+            return {
+                'request': self.request,
+                'format': self.format_kwarg,
+                'view': self,
+                'recipe-tag':
+                    RecipeTag.objects.filter(
+                        recipe_id=self.kwargs.get('pk')
+                    ).all(),
+                'recipe-ingredient':
+                    RecipeIngredient.objects.filter(
+                        recipe_id=self.kwargs.get('pk')
+                    ).all(),
+                'is_favorited':
+                    set(
+                        Favorite.objects.filter(
+                            follower_id=self.request.user
+                        ).values_list('recipe_id', flat=True)
+                    ),
+                'is_in_shopping_cart':
+                    set(
+                        ShoppingCart.objects.filter(
+                            client_id=self.request.user
+                        ).values_list('recipe_id', flat=True)
+                    ),
+            }
         return {
             'request': self.request,
             'format': self.format_kwarg,
@@ -95,18 +121,8 @@ class RecipeViewSet(ModelViewSet):
                 RecipeIngredient.objects.filter(
                     recipe_id=self.kwargs.get('pk')
                 ).all(),
-            'is_favorited':
-                set(
-                    Favorite.objects.filter(
-                        follower_id=self.request.user
-                    ).values_list('recipe_id', flat=True)
-                ),
-            'is_in_shopping_cart':
-                set(
-                    ShoppingCart.objects.filter(
-                        client_id=self.request.user
-                    ).values_list('recipe_id', flat=True)
-                ),
+            'is_favorited': False,
+            'is_in_shopping_cart': False,
         }
 
     def get_queryset(self):
