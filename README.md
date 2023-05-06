@@ -7,7 +7,7 @@
 
 ```sudo docker compose up -d --build```
 
-Выполнить миграции, создайть суперпользователя и соберать статику
+Выполнить миграции, создать суперпользователя и соберать статику:
 
 ```
 sudo docker compose exec backend python manage.py migrate
@@ -18,5 +18,5 @@ sudo docker compose exec backend python manage.py collectstatic --no-input
 Ресурсы проекта:
 * http://localhost/ - главная страница сайта;
 * http://localhost/admin/ - админ панель;
-* http://localhost/api/ - API проекта
-* http://localhost/api/docs/redoc.html - документация к API
+* http://localhost/api/ - API проекта;
+* http://localhost/api/docs/redoc.html - документация к API.
