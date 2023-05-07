@@ -196,7 +196,7 @@ class IngredientViewSet(
 ):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
-    pagination_class = None
+    # pagination_class = None
     permission_classes = (AllowAny,)
 
     filter_backends = (filters.SearchFilter,)
