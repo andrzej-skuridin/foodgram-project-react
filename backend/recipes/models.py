@@ -34,6 +34,9 @@ class Tag(models.Model):
         verbose_name_plural = 'Теги'
         ordering = ['-id']
 
+    def __str__(self):
+        return self.name
+
 
 class Ingredient(models.Model):
     name = models.CharField(max_length=200, verbose_name='Название')
@@ -91,7 +94,6 @@ class Recipe(models.Model):
     )
     cooking_time = models.IntegerField(
         verbose_name='Время приготовления',
-        max_length=10,
         validators=[validate_cooking_time, validate_integer],
         help_text='Required. 10 characters or fewer.',
     )
