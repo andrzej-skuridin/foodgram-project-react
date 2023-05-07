@@ -53,8 +53,6 @@ class RecipeAdmin(admin.ModelAdmin):
     list_display = (
         'id',
         'name',
-        'tags',
-        'ingredients',
         'author',
         'fav_counter'
     )
