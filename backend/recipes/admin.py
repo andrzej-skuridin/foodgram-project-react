@@ -50,7 +50,14 @@ class IngredientResource(resources.ModelResource):
 
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'author', 'fav_counter')
+    list_display = (
+        'id',
+        'name',
+        'tags',
+        'ingredients',
+        'author',
+        'fav_counter'
+    )
     search_fields = ('id', 'name', 'author', 'tags')
     list_filter = ('name',)
 
