@@ -198,9 +198,9 @@ class IngredientViewSet(
     serializer_class = IngredientSerializer
     permission_classes = (AllowAny,)
 
-    filter_backends = (DjangoFilterBackend,)
+    # filter_backends = (DjangoFilterBackend,)
     search_fields = ('^name',)
-    filterset_class = IngredientFilter
+    filterset_class = (IngredientFilter,)
 
 
 class TagViewSet(

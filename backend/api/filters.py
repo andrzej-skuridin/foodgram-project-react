@@ -19,6 +19,8 @@ class RecipeFilter(filters.FilterSet):
 
 
 class IngredientFilter(django_filters.FilterSet):
+    name = filters.CharFilter(lookup_expr='isstartswith')
+
     class Meta:
         model = Ingredient
         fields = ('name',)
