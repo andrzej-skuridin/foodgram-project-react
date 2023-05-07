@@ -197,6 +197,7 @@ class IngredientViewSet(
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
     permission_classes = (AllowAny,)
+    pagination_class = None
 
     # filter_backends = (DjangoFilterBackend,)
     search_fields = ('^name',)
