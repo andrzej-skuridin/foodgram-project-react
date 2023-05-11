@@ -199,9 +199,9 @@ class IngredientViewSet(
     permission_classes = (AllowAny,)
     pagination_class = None
 
-    filter_backends = (DjangoFilterBackend,)
     search_fields = ('^name',)
     filterset_class = (IngredientFilter,)
+    filterset_fields = ('^name',)
 
 
 class TagViewSet(
