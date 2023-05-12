@@ -193,10 +193,8 @@ class RecipeViewSet(ModelViewSet):
 
 class IngredientViewSet(
     ModelViewSet,
-    # mixins.ListModelMixin,
-    # mixins.RetrieveModelMixin,
-    # viewsets.GenericViewSet
 ):
+    http_method_names = ['get']
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
     permission_classes = (AllowAny,)
@@ -204,9 +202,6 @@ class IngredientViewSet(
 
     filter_backends = (IngredientFilter,)
     search_fields = ('^name',)
-    # search_fields = ('^name',)
-    # filterset_class = (IngredientFilter,)
-    # filterset_fields = ('^name',)
 
 
 class TagViewSet(
