@@ -185,8 +185,7 @@ REST_FRAMEWORK = {
 }
 
 DJOSER = {
-    'HIDE_USERS': False,  # зачем-то нужно, забыл, зачем именно. См. документацию
-    # 'LOGIN_FIELD': 'email',  # не фурычит, не знаю, почему, сделал через модель
+    'HIDE_USERS': False,  
     'PERMISSIONS': {
         'user_list': [
             'rest_framework.permissions.AllowAny'
